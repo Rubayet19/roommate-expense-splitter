@@ -6,11 +6,6 @@ interface FeatureProps extends Omit<ComponentProps<"div">, "title"> {
   title: ReactNode;
 }
 
-interface FeatureProps {
-  title: string;
-  description:  ReactNode;
-}
-
 function Feature({ title, description, ...props }: FeatureProps) {
   return (
     <div className={(styles.featuresFeature)} {...props}>
