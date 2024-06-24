@@ -22,7 +22,7 @@ function Footer() {
           <span>© 2024 Rubayet Bin Mujahid. Open Source under MIT License.</span>
         </div>
         <div className="text-right text-sm">
-          <a href="https://github.com/yourusername/yourrepository" className="text-slate-800 text-md font-medium shadow-md p-2 mx-4 bg-slate-100  hover:bg-slate-200 rounded-lg" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/Rubayet19/roommate-expense-splitter" className="text-slate-800 text-md font-medium shadow-md p-2 mx-4 bg-slate-100  hover:bg-slate-200 rounded-lg" target="_blank" rel="noopener noreferrer">
               View on GitHub
           </a>
         </div>
