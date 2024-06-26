@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import Link from 'next/link';
 
 interface FeatureProps {
   title: ReactNode;
@@ -16,12 +17,12 @@ const Feature = ({ title, description }: FeatureProps) => {
 
 function Footer() {
   return (
-    <footer className="bg-gray-50 text-gray-500 py-3 px-4">
+    <footer>
       <div className="max-w-6xl mx-auto flex justify-between items-center">
-        <div className="text-left text-sm" >
+        <div className="text-left text-sm mt-8" >
           <span>© 2024 Rubayet Bin Mujahid. Open Source under MIT License.</span>
         </div>
-        <div className="text-right text-sm">
+        <div className="text-right text-sm mt-8">
           <a href="https://github.com/Rubayet19/roommate-expense-splitter" className="text-slate-800 text-md font-medium shadow-md p-2 mx-4 bg-slate-100  hover:bg-slate-200 rounded-lg" target="_blank" rel="noopener noreferrer">
               View on GitHub
           </a>
@@ -35,8 +36,8 @@ const HomePage = () => {
   return (
     <div className='flex flex-col min-h-screen'>
       <div className='flex-grow'>
-        <div className='bg-gray-50 p-10'>
-          <div className='max-w-6xl mx-auto'>
+        <div >
+          <div className='max-w-6xl mx-auto pt-7'>
             <h1 className='text-5xl font-extrabold text-center text-gray-800'>
               Roommate Expense Splitter
             </h1>
@@ -47,12 +48,17 @@ const HomePage = () => {
               Roommate Expense Splitter is a simple and easy-to-use application that helps you manage your shared living expenses.
             </p>
             <div className='mt-16 text-center'>
-              <button className='bg-black hover:bg-slate-700 text-white font-bold py-2 px-4 rounded'>
-                Sign up
-              </button>
-              <button className='ml-5 text-black font-bold py-2 px-4 rounded'>
-                Login
-              </button>
+              <Link href='/signup'>
+                <button className='bg-black hover:bg-slate-700 text-white font-bold py-2 px-4 rounded'>
+                  Sign up
+                </button>
+              </Link>
+              <Link href='/login'>
+                <button className='ml-5 text-black font-bold py-2 px-4 rounded'>
+                  Login
+                </button>
+              </Link>
+
             </div>
             <h2 className='text-3xl font-semibold text-gray-800 mt-16 mb-6 text-center'>
               Features
