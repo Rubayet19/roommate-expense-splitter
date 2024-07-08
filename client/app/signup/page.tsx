@@ -44,7 +44,7 @@ export default function SignupPage() {
     <div className="flex flex-col  items-center min-h-screen bg-gray-100">
         <header className="w-full text-white py-4 px-8">
             <button onClick={handleBackToHome} className="bg-black hover:bg-slate-700 text-white text-sm  py-2 px-4 rounded">
-            &larr; Back to Home
+            Home
             </button>
         </header>
         <div className="flex justify-center items-center flex-grow ">
