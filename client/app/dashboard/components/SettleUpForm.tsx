@@ -5,7 +5,7 @@ import { Roommate } from '../types/shared';
 interface SettleUpFormProps {
   roommates: Roommate[];
   currentUser: Roommate;
-  onSettleUp: (payer: string, receiver: string, amount: number) => void;
+  onSettleUp: (payer: string, receiver: string, amount: number, date: string) => void;
   onClose: () => void;
 }
 
@@ -13,13 +13,14 @@ export default function SettleUpForm({ roommates, currentUser, onSettleUp, onClo
   const [payer, setPayer] = useState<string>('');
   const [receiver, setReceiver] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
+  const [date, setDate] = useState<string>('');
 
   const allUsers = [currentUser, ...roommates];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (payer && receiver && amount) {
-      onSettleUp(payer, receiver, parseFloat(amount));
+    if (payer && receiver && amount && date) {
+      onSettleUp(payer, receiver, parseFloat(amount), date);
       onClose();
     }
   };
@@ -86,6 +87,19 @@ export default function SettleUpForm({ roommates, currentUser, onSettleUp, onClo
               placeholder="Enter amount"
               step="0.01"
               min="0"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="date" className="block text-gray-700 text-sm font-bold mb-2">
+              Date
+            </label>
+            <input
+              type="date"
+              id="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
