@@ -1,19 +1,32 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { useState } from 'react';
 import AllExpenses from './AllExpenses';
 import RoommatesList from './RoommatesList';
 import AddExpenseForm from './components/AddExpenseForm';
 import SettleUpForm from './components/SettleUpForm';
 import { Roommate, Expense } from './types/shared';
+import ProtectedRoute from '../components/ProtectedRoute';
+import { logout } from '../services/authService';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
+  useEffect(() => {
+    console.log('Dashboard page mounted');
+  }, []);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'allExpenses' | 'roommates'>('dashboard');
   const [showAddExpenseForm, setShowAddExpenseForm] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSettleUpForm, setShowSettleUpForm] = useState(false);
   const [balances, setBalances] = useState<{ [key: string]: number }>({});
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   // Mock current user and roommates data
   const currentUser: Roommate = { id: 'user1', name: 'You', email: 'you@example.com' };
@@ -61,6 +74,7 @@ export default function Dashboard() {
   };
 
   return (
+    //<ProtectedRoute>
     <div className="flex flex-col min-h-screen -m-5">
       <nav className="bg-white">
         <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -86,6 +100,7 @@ export default function Dashboard() {
               )}
               <button
                 className="bg-black hover:bg-slate-700 text-white text-sm font-semibold py-2 px-3 rounded"
+                onClick={handleLogout}
               >
                 Logout
               </button>
@@ -215,5 +230,6 @@ export default function Dashboard() {
     />
   )}
     </div>
+  //x</ProtectedRoute>
   );
 }
