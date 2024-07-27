@@ -1,14 +1,12 @@
-// app/services/authService.ts
+
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api/auth/';
 
 export const login = async (username: string, password: string) => {
   try {
-    console.log("Attempting login...");
     const response = await axios.post(API_URL + 'login', { username, password });
     if (response.data.token) {
-      console.log("Login successful, storing user data");
       localStorage.setItem('user', JSON.stringify(response.data));
       return { success: true };
     }
@@ -29,9 +27,7 @@ export const logout = () => {
 
 export const register = async (username: string, password: string) => {
   try {
-    console.log("Attempting registration...");
     const response = await axios.post(API_URL + 'signup', { username, password });
-    console.log("Registration successful");
     return response.data;
   } catch (error) {
     console.error("Registration failed:", error);

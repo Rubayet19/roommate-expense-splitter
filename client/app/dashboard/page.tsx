@@ -74,7 +74,7 @@ export default function Dashboard() {
   };
 
   return (
-    //<ProtectedRoute>
+    <ProtectedRoute>
     <div className="flex flex-col min-h-screen -m-5">
       <nav className="bg-white">
         <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -230,6 +230,6 @@ export default function Dashboard() {
     />
   )}
     </div>
-  //x</ProtectedRoute>
+  </ProtectedRoute>
   );
 }

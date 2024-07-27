@@ -14,16 +14,12 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('handleSubmit called');
     e.preventDefault();
     try {
-      console.log('Logging in...');
       const result = await login(username, password);
       if (result.success) {
-        console.log('Login successful, redirecting to dashboard');
         router.push('/dashboard');
       } else {
-        console.log('Login failed');
         setError(result.message || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
