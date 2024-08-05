@@ -1,27 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Roommate, Expense } from '../types/shared';
+import { Roommate, Expense, ExpenseDTO } from '../types/shared';
+import { getRoommates, addRoommate } from '../../services/roommateService';
 
 interface AddExpenseFormProps {
   onClose: () => void;
-  onSubmit: (expense: Expense) => void;
+  onSubmit: (expense: ExpenseDTO) => void;
   currentUser: Roommate;
-  roommates: Roommate[];
-  onAddRoommate: (name: string) => void;
 }
 
-export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommates, onAddRoommate }: AddExpenseFormProps) { //these are the props that are passed to the component from dashboard.tsx
-  const [expense, setExpense] = useState<Expense>({
+export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddExpenseFormProps) {
+  const [expense, setExpense] = useState<ExpenseDTO>({
     description: '',
     amount: '',
     paidBy: [currentUser.id],
     splitWith: [],
-    splitType: 'equal',
+    splitType: 'EQUAL',
     date: new Date().toISOString().substr(0, 10),
     splitDetails: {},
   });
+  const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [newRoommate, setNewRoommate] = useState('');
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
   const paidByRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchRoommates();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,7 +41,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   }, []);
 
   useEffect(() => {
-    if (expense.splitType === 'equal' && expense.amount) {
+    if (expense.splitType === 'EQUAL' && expense.amount) {
       const perPersonAmount = (parseFloat(expense.amount) / (expense.splitWith.length + 1)).toFixed(2);
       setExpense(prev => ({
         ...prev,
@@ -48,6 +52,15 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
       }));
     }
   }, [expense.splitType, expense.amount, expense.splitWith]);
+
+  const fetchRoommates = async () => {
+    try {
+      const fetchedRoommates = await getRoommates();
+      setRoommates(fetchedRoommates);
+    } catch (error) {
+      console.error('Error fetching roommates:', error);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -80,10 +93,15 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
     }));
   };
 
-  const handleAddNewRoommate = () => {
+  const handleAddNewRoommate = async () => {
     if (newRoommate.trim()) {
-      onAddRoommate(newRoommate.trim());
-      setNewRoommate('');
+      try {
+        const addedRoommate = await addRoommate(newRoommate.trim());
+        setRoommates(prev => [...prev, addedRoommate]);
+        setNewRoommate('');
+      } catch (error) {
+        console.error('Error adding new roommate:', error);
+      }
     }
   };
 
@@ -212,16 +230,16 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
               onChange={handleChange}
               className="ml-2 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="equal">equally</option>
-              <option value="amounts">by amounts</option>
+              <option value="EQUAL">equally</option>
+              <option value="CUSTOM">by custom amounts</option>
             </select>
           </div>
-          {expense.splitType === 'equal' && (
+          {expense.splitType === 'EQUAL' && (
             <p className="mb-4 text-sm text-gray-700">
               ${((parseFloat(expense.amount) || 0) / (expense.splitWith.length + 1)).toFixed(2)}/person
             </p>
           )}
-          {expense.splitType === 'amounts' && (
+          {expense.splitType === 'CUSTOM' && (
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-700 mb-2">Enter amounts:</p>
               <div className="space-y-2">
