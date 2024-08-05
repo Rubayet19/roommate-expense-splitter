@@ -11,6 +11,10 @@ import { Roommate, Expense } from './types/shared';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { logout } from '../services/authService';
 import { useRouter } from 'next/navigation';
+import { getRoommates } from '../services/roommateService';
+import { addExpense } from '../services/expenseService';
+import { getUserExpenses } from '../services/expenseService';
+import { ExpenseDTO } from './types/shared';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -22,56 +26,80 @@ export default function Dashboard() {
   const [showSettleUpForm, setShowSettleUpForm] = useState(false);
   const [balances, setBalances] = useState<{ [key: string]: number }>({});
   const router = useRouter();
+  const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
+  const [roommates, setRoommates] = useState<Roommate[]>([]);
+  const [currentUser, setCurrentUser] = useState<Roommate | null>(null);
+
+  useEffect(() => {
+    fetchCurrentUser();
+    fetchRoommates();
+    fetchExpenses();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    // TODO: Implement fetchCurrentUser service
+    // For now, we'll use a mock current user
+    setCurrentUser({ id: 'currentUserId', name: 'Current User' });
+  };
+
+  const fetchRoommates = async () => {
+    try {
+      const fetchedRoommates = await getRoommates();
+      setRoommates(fetchedRoommates);
+    } catch (error) {
+      console.error('Error fetching roommates:', error);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    try {
+      const fetchedExpenses = await getUserExpenses();
+      setExpenses(fetchedExpenses);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
-  // Mock current user and roommates data
-  const currentUser: Roommate = { id: 'user1', name: 'You', email: 'you@example.com' };
-  const [roommates, setRoommates] = useState<Roommate[]>([
-    { id: 'user2', name: 'Roommate 1', email: 'roommate1@example.com' },
-    { id: 'user3', name: 'Roommate 2', email: 'roommate2@example.com' },
-  ]);
-  const updateBalances = (payer: string, receiver: string, amount: number) => {
-    setBalances(prevBalances => {
-      const newBalances = { ...prevBalances };
-      newBalances[payer] = (newBalances[payer] || 0) - amount;
-      newBalances[receiver] = (newBalances[receiver] || 0) + amount;
-      return newBalances;
-    });
+  const handleAddExpense = async (expense: ExpenseDTO) => {
+    try {
+      const addedExpense = await addExpense(expense);
+      setExpenses(prev => [...prev, addedExpense]);
+      fetchExpenses(); // Refresh expenses after adding a new one
+    } catch (error) {
+      console.error('Error adding expense:', error);
+    }
   };
+  // const updateBalances = (payer: string, receiver: string, amount: number) => {
+  //   setBalances(prevBalances => {
+  //     const newBalances = { ...prevBalances };
+  //     newBalances[payer] = (newBalances[payer] || 0) - amount;
+  //     newBalances[receiver] = (newBalances[receiver] || 0) + amount;
+  //     return newBalances;
+  //   });
+  // };
 
   // Mock balance data
-  const totalBalance = balances[currentUser.id] || 0;
-  const youOwe = Object.entries(balances)
-    .filter(([id, balance]) => id !== currentUser.id && balance > 0)
-    .reduce((sum, [_, balance]) => sum + balance, 0);
-  const youAreOwed = Object.entries(balances)
-    .filter(([id, balance]) => id !== currentUser.id && balance < 0)
-    .reduce((sum, [_, balance]) => sum + Math.abs(balance), 0);
+  // const totalBalance = balances[currentUser.id] || 0;
+  // const youOwe = Object.entries(balances)
+  //   .filter(([id, balance]) => id !== currentUser.id && balance > 0)
+  //   .reduce((sum, [_, balance]) => sum + balance, 0);
+  // const youAreOwed = Object.entries(balances)
+  //   .filter(([id, balance]) => id !== currentUser.id && balance < 0)
+  //   .reduce((sum, [_, balance]) => sum + Math.abs(balance), 0);
 
-  const handleAddExpense = (expense: Expense) => {
-    // Here you would typically send this data to your backend
-    console.log('New expense:', expense);
-    // Then you might refresh your expense list or update the total
-  };
 
-  const handleSettleUp = (payer: string, receiver: string, amount: number) => {
-    console.log(`${payer} paid ${receiver} $${amount}`);
-    updateBalances(payer, receiver, amount);
-    setShowSettleUpForm(false);
-  };
+  // const handleSettleUp = (payer: string, receiver: string, amount: number) => {
+  //   console.log(`${payer} paid ${receiver} $${amount}`);
+  //   updateBalances(payer, receiver, amount);
+  //   setShowSettleUpForm(false);
+  // };
 
-  const handleAddRoommate = (name: string) => {
-    const newRoommate: Roommate = { 
-      id: Date.now().toString(), 
-      name, 
-      email: `${name.toLowerCase().replace(' ', '.')}@example.com` 
-    };
-    setRoommates(prev => [...prev, newRoommate]);
-  };
+
 
   return (
     <ProtectedRoute>
@@ -119,12 +147,12 @@ export default function Dashboard() {
             >
               <span className="block px-4 py-2">Dashboard</span>
             </li>
-            <li 
+            {/* <li 
               className={`mx-2 rounded cursor-pointer ${activeTab === 'allExpenses' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
               onClick={() => setActiveTab('allExpenses')}
             >
               <span className="block px-4 py-2">All Expenses</span>
-            </li>
+            </li> */}
             <li 
               className={`mx-2 rounded cursor-pointer ${activeTab === 'roommates' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
               onClick={() => setActiveTab('roommates')}
@@ -155,7 +183,7 @@ export default function Dashboard() {
               </div>
               
               {/* Balance Overview */}
-              <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-3 gap-4 ">
+              {/* <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-3 gap-4 ">
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Total Balance</h2>
                   <p className={`text-xl font-bold ${totalBalance < 0 ? 'text-red-500' : 'text-green-500'}`}>
@@ -170,7 +198,7 @@ export default function Dashboard() {
                   <h2 className="text-lg font-semibold mb-2">You are Owed</h2>
                   <p className="text-xl font-bold text-green-500">${youAreOwed.toFixed(2)}</p>
                 </div>
-              </div>
+              </div> */}
 
               {/* Detailed Balances */}
               <div className="grid grid-cols-2 gap-6">
@@ -198,12 +226,12 @@ export default function Dashboard() {
             </>
           )}
 
-          {activeTab === 'allExpenses' && (
+          {/* {activeTab === 'allExpenses' && (
             <>
               <h1 className="text-2xl font-semibold text-gray-900 mb-6">All Expenses</h1>
               <AllExpenses />
             </>
-          )}
+          )} */}
           {activeTab === 'roommates' && (
             <>
               <h1 className="text-2xl font-semibold text-gray-900 mb-6">My Roommates</h1>
@@ -212,23 +240,21 @@ export default function Dashboard() {
           )}
         </main>
       </div>
-      {showAddExpenseForm && (
+      {showAddExpenseForm && currentUser && (
         <AddExpenseForm 
           onClose={() => setShowAddExpenseForm(false)}
           onSubmit={handleAddExpense}
           currentUser={currentUser}
-          roommates={roommates}
-          onAddRoommate={handleAddRoommate}
         />
       )}
-  {showSettleUpForm && (
+  {/* {showSettleUpForm && (
     <SettleUpForm 
       onClose={() => setShowSettleUpForm(false)}
       onSettleUp={handleSettleUp}
       currentUser={currentUser}
       roommates={roommates}
     />
-  )}
+  )} */}
     </div>
   </ProtectedRoute>
   );
