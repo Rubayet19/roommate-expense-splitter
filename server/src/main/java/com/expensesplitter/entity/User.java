@@ -1,11 +1,12 @@
 package com.expensesplitter.entity;
 
 import jakarta.persistence.*;
-
-
+import lombok.Data;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
+@Data
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,20 +18,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    // Getters and setters
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    @OneToMany(mappedBy = "user")
+    private List<Roommate> roommates;
 }

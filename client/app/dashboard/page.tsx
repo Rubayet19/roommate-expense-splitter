@@ -7,7 +7,7 @@ import AllExpenses from './AllExpenses';
 import RoommatesList from './RoommatesList';
 import AddExpenseForm from './components/AddExpenseForm';
 import SettleUpForm from './components/SettleUpForm';
-import { Roommate, Expense } from './types/shared';
+import { Roommate, Expense, User } from './types/shared';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { logout } from '../services/authService';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ import { getRoommates } from '../services/roommateService';
 import { addExpense } from '../services/expenseService';
 import { getUserExpenses } from '../services/expenseService';
 import { ExpenseDTO } from './types/shared';
+import { getCurrentUser } from '../services/userService';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [roommates, setRoommates] = useState<Roommate[]>([]);
-  const [currentUser, setCurrentUser] = useState<Roommate | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -37,9 +38,13 @@ export default function Dashboard() {
   }, []);
 
   const fetchCurrentUser = async () => {
-    // TODO: Implement fetchCurrentUser service
-    // For now, we'll use a mock current user
-    setCurrentUser({ id: 'currentUserId', name: 'Current User' });
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      // Handle error (e.g., redirect to login page)
+    }
   };
 
   const fetchRoommates = async () => {
@@ -245,6 +250,7 @@ export default function Dashboard() {
           onClose={() => setShowAddExpenseForm(false)}
           onSubmit={handleAddExpense}
           currentUser={currentUser}
+          roommates={roommates}
         />
       )}
   {/* {showSettleUpForm && (

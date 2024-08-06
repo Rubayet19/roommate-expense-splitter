@@ -1,16 +1,43 @@
-export type Roommate={
-    id: string;
-    name: string;
-    email: string;
-  };
-  
+export interface User {
+  id: number;
+  username: string;
+}
+
+export interface Roommate {
+  id: number;
+  name: string;
+  totalOwed?: number;  // This might be calculated on the frontend or returned from the backend
+}
 
 export interface Expense {
+  id?: string;  // Optional because it won't be present for new expenses
   description: string;
   amount: string;
-  paidBy: string[];  // Changed to array to allow multiple payers
+  paidBy: string[];
   splitWith: string[];
-  splitType: 'equal' | 'amounts';  // Removed 'percentages'
+  splitType: 'equal' | 'custom';  // Changed to match backend enum
   date: string;
   splitDetails: { [key: string]: string };
+}
+
+export interface AddRoommateDTO {
+  name: string;
+}
+
+export interface ExpenseDTO {
+  id?: number;
+  description: string;
+  amount: string;
+  paidBy: number[];
+  splitWith: number[];
+  splitType: string;
+  date: string;
+  splitDetails: { [key: number]: string };
+}
+
+export interface SettlementDTO {
+  payerId: string;
+  receiverId: string;
+  amount: number;
+  date: string;
 }

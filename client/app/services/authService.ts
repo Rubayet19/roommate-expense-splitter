@@ -7,6 +7,7 @@ export const login = async (username: string, password: string) => {
   try {
     const response = await axios.post(API_URL + 'login', { username, password });
     if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data));
       return { success: true };
     }
@@ -21,8 +22,9 @@ export const login = async (username: string, password: string) => {
 };
 
 export const logout = () => {
-  console.log("Logging out, removing user data");
+  console.log("Logging out, removing user data and token");
   localStorage.removeItem('user');
+  localStorage.removeItem('token');
 };
 
 export const register = async (username: string, password: string) => {

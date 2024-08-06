@@ -1,31 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Roommate, Expense, ExpenseDTO } from '../types/shared';
-import { getRoommates, addRoommate } from '../../services/roommateService';
+import { Roommate, ExpenseDTO, User } from '../types/shared';
+import { addRoommate } from '../../services/roommateService';
 
 interface AddExpenseFormProps {
   onClose: () => void;
   onSubmit: (expense: ExpenseDTO) => void;
-  currentUser: Roommate;
+  currentUser: User;
+  roommates: Roommate[];
 }
 
-export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddExpenseFormProps) {
+export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommates }: AddExpenseFormProps) {
   const [expense, setExpense] = useState<ExpenseDTO>({
     description: '',
     amount: '',
-    paidBy: [currentUser.id],
+    paidBy: [Number(currentUser.id)],
     splitWith: [],
     splitType: 'EQUAL',
     date: new Date().toISOString().substr(0, 10),
     splitDetails: {},
   });
-  const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [newRoommate, setNewRoommate] = useState('');
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
   const paidByRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetchRoommates();
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,38 +42,29 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
       setExpense(prev => ({
         ...prev,
         splitDetails: {
-          [currentUser.id]: perPersonAmount,
-          ...expense.splitWith.reduce((acc, id) => ({ ...acc, [id]: perPersonAmount }), {})
+          [Number(currentUser.id)]: perPersonAmount,
+          ...expense.splitWith.reduce((acc, id) => ({ ...acc, [Number(id)]: perPersonAmount }), {})
         }
       }));
     }
-  }, [expense.splitType, expense.amount, expense.splitWith]);
-
-  const fetchRoommates = async () => {
-    try {
-      const fetchedRoommates = await getRoommates();
-      setRoommates(fetchedRoommates);
-    } catch (error) {
-      console.error('Error fetching roommates:', error);
-    }
-  };
+  }, [expense.splitType, expense.amount, expense.splitWith, currentUser.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setExpense(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSplitWithChange = (roommateId: string) => {
+  const handleSplitWithChange = (roommateId: number) => {
     setExpense(prev => ({
       ...prev,
       splitWith: prev.splitWith.includes(roommateId)
         ? prev.splitWith.filter(id => id !== roommateId)
         : [...prev.splitWith, roommateId],
-      paidBy: [currentUser.id] // Reset paidBy when splitWith changes
+      paidBy: [Number(currentUser.id)]
     }));
   };
 
-  const handlePaidByChange = (id: string) => {
+  const handlePaidByChange = (id: number) => {
     setExpense(prev => ({
       ...prev,
       paidBy: prev.paidBy.includes(id)
@@ -86,7 +73,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
     }));
   };
 
-  const handleSplitDetailChange = (id: string, amount: string) => {
+  const handleSplitDetailChange = (id: number, amount: string) => {
     setExpense(prev => ({
       ...prev,
       splitDetails: { ...prev.splitDetails, [id]: amount }
@@ -97,7 +84,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
     if (newRoommate.trim()) {
       try {
         const addedRoommate = await addRoommate(newRoommate.trim());
-        setRoommates(prev => [...prev, addedRoommate]);
+        roommates.push(addedRoommate);
         setNewRoommate('');
       } catch (error) {
         console.error('Error adding new roommate:', error);
@@ -107,11 +94,24 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(expense);
+    const submittableExpense: ExpenseDTO = {
+      ...expense,
+      paidBy: expense.paidBy.map(Number),
+      splitWith: expense.splitWith.map(Number),
+      splitDetails: Object.entries(expense.splitDetails).reduce((acc, [key, value]) => {
+        const numKey = Number(key);
+        if (!isNaN(numKey)) {
+          acc[numKey] = value;
+        }
+        return acc;
+      }, {} as { [key: number]: string })
+    };
+    console.log('Submitting expense:', submittableExpense);
+    onSubmit(submittableExpense);
     onClose();
   };
 
-  const selectedRoommates = roommates.filter(r => expense.splitWith.includes(r.id));
+  const selectedRoommates = roommates.filter(r => expense.splitWith.includes(Number(r.id)));
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
@@ -130,14 +130,14 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
                 <button
                   key={roommate.id}
                   type="button"
-                  onClick={() => handleSplitWithChange(roommate.id)}
+                  onClick={() => handleSplitWithChange(Number(roommate.id))}
                   className={`px-2 py-1 rounded-full text-sm ${
-                    expense.splitWith.includes(roommate.id)
+                    expense.splitWith.includes(Number(roommate.id))
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-200 text-gray-700'
                   }`}
                 >
-                  {roommate.name} {expense.splitWith.includes(roommate.id) && '✕'}
+                  {roommate.name} {expense.splitWith.includes(Number(roommate.id)) && '✕'}
                 </button>
               ))}
               <input
@@ -192,7 +192,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
                 className="ml-2 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {expense.paidBy.length === 1 
-                  ? (expense.paidBy[0] === currentUser.id ? currentUser.name : roommates.find(r => r.id === expense.paidBy[0])?.name)
+                  ? (expense.paidBy[0] === Number(currentUser.id) ? currentUser.username : roommates.find(r => Number(r.id) === expense.paidBy[0])?.name)
                   : `${expense.paidBy.length} people`
                 } ▼
               </button>
@@ -203,18 +203,18 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={expense.paidBy.includes(currentUser.id)}
-                      onChange={() => handlePaidByChange(currentUser.id)}
+                      checked={expense.paidBy.includes(Number(currentUser.id))}
+                      onChange={() => handlePaidByChange(Number(currentUser.id))}
                       className="mr-2"
                     />
-                    {currentUser.name} (You)
+                    {currentUser.username} (You)
                   </label>
                   {selectedRoommates.map(roommate => (
                     <label key={roommate.id} className="flex items-center mt-1">
                       <input
                         type="checkbox"
-                        checked={expense.paidBy.includes(roommate.id)}
-                        onChange={() => handlePaidByChange(roommate.id)}
+                        checked={expense.paidBy.includes(Number(roommate.id))}
+                        onChange={() => handlePaidByChange(Number(roommate.id))}
                         className="mr-2"
                       />
                       {roommate.name}
@@ -244,11 +244,11 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
               <p className="text-sm font-medium text-gray-700 mb-2">Enter amounts:</p>
               <div className="space-y-2">
                 <div className="flex items-center">
-                  <span className="w-1/3">{currentUser.name}:</span>
+                  <span className="w-1/3">{currentUser.username}:</span>
                   <input
                     type="number"
-                    value={expense.splitDetails[currentUser.id] || ''}
-                    onChange={(e) => handleSplitDetailChange(currentUser.id, e.target.value)}
+                    value={expense.splitDetails[Number(currentUser.id)] || ''}
+                    onChange={(e) => handleSplitDetailChange(Number(currentUser.id), e.target.value)}
                     className="w-2/3 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Amount"
                   />
@@ -258,8 +258,8 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser }: AddEx
                     <span className="w-1/3">{roommate.name}:</span>
                     <input
                       type="number"
-                      value={expense.splitDetails[roommate.id] || ''}
-                      onChange={(e) => handleSplitDetailChange(roommate.id, e.target.value)}
+                      value={expense.splitDetails[Number(roommate.id)] || ''}
+                      onChange={(e) => handleSplitDetailChange(Number(roommate.id), e.target.value)}
                       className="w-2/3 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Amount"
                     />
