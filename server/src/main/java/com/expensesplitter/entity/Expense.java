@@ -38,6 +38,10 @@ public class Expense {
         this.isPayer = isPayer;
     }
 
+    public boolean getIsPayer() {
+        return this.isPayer;
+    }
+
     // Enum for split type
     public enum SplitType {
         EQUAL, CUSTOM

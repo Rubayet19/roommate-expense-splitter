@@ -13,7 +13,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   const [expense, setExpense] = useState<ExpenseDTO>({
     description: '',
     amount: '',
-    paidBy: [Number(currentUser.id)],
+    paidBy: [currentUser.id],
     splitWith: [],
     splitType: 'EQUAL',
     date: new Date().toISOString().substr(0, 10),
@@ -22,6 +22,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   const [newRoommate, setNewRoommate] = useState('');
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
   const paidByRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,13 +39,17 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
 
   useEffect(() => {
     if (expense.splitType === 'EQUAL' && expense.amount) {
-      const perPersonAmount = (parseFloat(expense.amount) / (expense.splitWith.length + 1)).toFixed(2);
+      const totalAmount = parseFloat(expense.amount);
+      const perPersonAmount = (totalAmount / (expense.splitWith.length + 1)).toFixed(2);
+      const newSplitDetails: { [key: number]: string } = {};
+      
+      [currentUser.id, ...expense.splitWith].forEach(id => {
+        newSplitDetails[id] = perPersonAmount;
+      });
+
       setExpense(prev => ({
         ...prev,
-        splitDetails: {
-          [Number(currentUser.id)]: perPersonAmount,
-          ...expense.splitWith.reduce((acc, id) => ({ ...acc, [Number(id)]: perPersonAmount }), {})
-        }
+        splitDetails: newSplitDetails
       }));
     }
   }, [expense.splitType, expense.amount, expense.splitWith, currentUser.id]);
@@ -55,22 +60,39 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   };
 
   const handleSplitWithChange = (roommateId: number) => {
-    setExpense(prev => ({
-      ...prev,
-      splitWith: prev.splitWith.includes(roommateId)
+    setExpense(prev => {
+      const newSplitWith = prev.splitWith.includes(roommateId)
         ? prev.splitWith.filter(id => id !== roommateId)
-        : [...prev.splitWith, roommateId],
-      paidBy: [Number(currentUser.id)]
-    }));
+        : [...prev.splitWith, roommateId];
+      
+      const newSplitDetails = { ...prev.splitDetails };
+      if (newSplitWith.includes(roommateId)) {
+        newSplitDetails[roommateId] = '0';
+      } else {
+        delete newSplitDetails[roommateId];
+      }
+
+      return {
+        ...prev,
+        splitWith: newSplitWith,
+        splitDetails: newSplitDetails
+      };
+    });
   };
 
   const handlePaidByChange = (id: number) => {
-    setExpense(prev => ({
-      ...prev,
-      paidBy: prev.paidBy.includes(id)
+    setExpense(prev => {
+      const newPaidBy = prev.paidBy.includes(id)
         ? prev.paidBy.filter(payerId => payerId !== id)
-        : [...prev.paidBy, id]
-    }));
+        : [...prev.paidBy, id];
+
+      // Ensure at least one payer is selected
+      if (newPaidBy.length === 0) {
+        newPaidBy.push(currentUser.id);
+      }
+
+      return { ...prev, paidBy: newPaidBy };
+    });
   };
 
   const handleSplitDetailChange = (id: number, amount: string) => {
@@ -94,6 +116,16 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+
+    const totalAmount = parseFloat(expense.amount);
+    const totalShares = Object.values(expense.splitDetails).reduce((sum, share) => sum + Math.abs(parseFloat(share)), 0);
+
+    if (expense.splitType === 'CUSTOM' && totalShares > totalAmount) {
+      setError(`The sum of individual shares (${totalShares.toFixed(2)}) exceeds the total amount (${totalAmount.toFixed(2)})`);
+      return;
+    }
+
     const submittableExpense: ExpenseDTO = {
       ...expense,
       paidBy: expense.paidBy.map(Number),
@@ -106,12 +138,52 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
         return acc;
       }, {} as { [key: number]: string })
     };
+
     console.log('Submitting expense:', submittableExpense);
     onSubmit(submittableExpense);
     onClose();
   };
 
-  const selectedRoommates = roommates.filter(r => expense.splitWith.includes(Number(r.id)));
+  const renderSplitDetails = () => {
+    const totalAmount = parseFloat(expense.amount);
+    let totalAssigned = 0;
+
+    return (
+      <div className="mt-4">
+        <h4 className="text-lg font-medium mb-2">Split Details:</h4>
+        <div className="space-y-2">
+          {[currentUser.id, ...expense.splitWith].map(id => {
+            const isCurrentUser = id === currentUser.id;
+            const amount = parseFloat(expense.splitDetails[id] || '0');
+            totalAssigned += amount;
+
+            return (
+              <div key={id} className="flex items-center">
+                <label className="w-1/3">{isCurrentUser ? 'You' : roommates.find(r => r.id === id)?.name}:</label>
+                <input
+                  type="number"
+                  value={Math.abs(amount).toFixed(2)}
+                  onChange={(e) => handleSplitDetailChange(id, e.target.value)}
+                  placeholder="Share amount"
+                  className="w-2/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  readOnly={expense.splitType === 'EQUAL'}
+                />
+                <span className="ml-2">
+                  {expense.paidBy.includes(id) ? '(Paid)' : '(Owes)'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2">
+          <p>Total: ${totalAmount.toFixed(2)}</p>
+          <p>Assigned: ${totalAssigned.toFixed(2)}</p>
+          <p>Remaining: ${(totalAmount - totalAssigned).toFixed(2)}</p>
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
@@ -192,7 +264,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 className="ml-2 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {expense.paidBy.length === 1 
-                  ? (expense.paidBy[0] === Number(currentUser.id) ? currentUser.username : roommates.find(r => Number(r.id) === expense.paidBy[0])?.name)
+                  ? (expense.paidBy[0] === currentUser.id ? currentUser.username : roommates.find(r => r.id === expense.paidBy[0])?.name)
                   : `${expense.paidBy.length} people`
                 } ▼
               </button>
@@ -203,23 +275,26 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={expense.paidBy.includes(Number(currentUser.id))}
-                      onChange={() => handlePaidByChange(Number(currentUser.id))}
+                      checked={expense.paidBy.includes(currentUser.id)}
+                      onChange={() => handlePaidByChange(currentUser.id)}
                       className="mr-2"
                     />
                     {currentUser.username} (You)
                   </label>
-                  {selectedRoommates.map(roommate => (
-                    <label key={roommate.id} className="flex items-center mt-1">
-                      <input
-                        type="checkbox"
-                        checked={expense.paidBy.includes(Number(roommate.id))}
-                        onChange={() => handlePaidByChange(Number(roommate.id))}
-                        className="mr-2"
-                      />
-                      {roommate.name}
-                    </label>
-                  ))}
+                  {expense.splitWith.map(roommateId => {
+                    const roommate = roommates.find(r => r.id === roommateId);
+                    return roommate && (
+                      <label key={roommateId} className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={expense.paidBy.includes(roommateId)}
+                          onChange={() => handlePaidByChange(roommateId)}
+                          className="mr-2"
+                        />
+                        {roommate.name}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -239,35 +314,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
               ${((parseFloat(expense.amount) || 0) / (expense.splitWith.length + 1)).toFixed(2)}/person
             </p>
           )}
-          {expense.splitType === 'CUSTOM' && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Enter amounts:</p>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <span className="w-1/3">{currentUser.username}:</span>
-                  <input
-                    type="number"
-                    value={expense.splitDetails[Number(currentUser.id)] || ''}
-                    onChange={(e) => handleSplitDetailChange(Number(currentUser.id), e.target.value)}
-                    className="w-2/3 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Amount"
-                  />
-                </div>
-                {selectedRoommates.map(roommate => (
-                  <div key={roommate.id} className="flex items-center">
-                    <span className="w-1/3">{roommate.name}:</span>
-                    <input
-                      type="number"
-                      value={expense.splitDetails[Number(roommate.id)] || ''}
-                      onChange={(e) => handleSplitDetailChange(Number(roommate.id), e.target.value)}
-                      className="w-2/3 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Amount"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {expense.splitType === 'CUSTOM' && renderSplitDetails()}
           <div className="mb-4">
             <input
               type="date"
@@ -277,6 +324,11 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          {error && (
+            <div className="mb-4 text-red-500 text-sm">
+              {error}
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -287,7 +339,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
             </button>
             <button
               type="submit"
-              className="bg-black hover:bg-slate-700 text-white font-semibold py-1 px-4 rounded mr-2  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="bg-black hover:bg-slate-700 text-white font-semibold py-1 px-4 rounded mr-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Save
             </button>
@@ -295,5 +347,5 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
         </form>
       </div>
     </div>
-  );
+  ); 
 }
