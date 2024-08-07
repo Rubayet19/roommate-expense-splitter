@@ -9,16 +9,16 @@ export interface Roommate {
   totalOwed?: number;  // This might be calculated on the frontend or returned from the backend
 }
 
-export interface Expense {
-  id?: string;  // Optional because it won't be present for new expenses
-  description: string;
-  amount: string;
-  paidBy: string[];
-  splitWith: string[];
-  splitType: 'equal' | 'custom';  // Changed to match backend enum
-  date: string;
-  splitDetails: { [key: string]: string };
-}
+// export interface Expense {
+//   id?: string;  // Optional because it won't be present for new expenses
+//   description: string;
+//   amount: string;
+//   paidBy: string[];
+//   splitWith: string[];
+//   splitType: 'equal' | 'custom';  // Changed to match backend enum
+//   date: string;
+//   splitDetails: { [key: string]: string };
+// }
 
 export interface AddRoommateDTO {
   name: string;
@@ -40,4 +40,11 @@ export interface SettlementDTO {
   receiverId: number;
   amount: number;
   date: string;
+}
+
+export interface ExpenseParticipantDTO {
+  id: number;
+  expenseId: number;
+  participantId: number;
+  shareAmount: number;
 }

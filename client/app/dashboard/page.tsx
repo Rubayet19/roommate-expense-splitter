@@ -156,12 +156,12 @@ export default function Dashboard() {
             >
               <span className="block px-4 py-2">Dashboard</span>
             </li>
-            {/* <li 
+            <li 
               className={`mx-2 rounded cursor-pointer ${activeTab === 'allExpenses' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
               onClick={() => setActiveTab('allExpenses')}
             >
               <span className="block px-4 py-2">All Expenses</span>
-            </li> */}
+            </li>
             <li 
               className={`mx-2 rounded cursor-pointer ${activeTab === 'roommates' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
               onClick={() => setActiveTab('roommates')}
@@ -260,12 +260,12 @@ export default function Dashboard() {
             </>
           )}
 
-          {/* {activeTab === 'allExpenses' && (
+          {activeTab === 'allExpenses' && (
             <>
               <h1 className="text-2xl font-semibold text-gray-900 mb-6">All Expenses</h1>
               <AllExpenses />
             </>
-          )} */}
+          )}
           {activeTab === 'roommates' && (
             <>
               <h1 className="text-2xl font-semibold text-gray-900 mb-6">My Roommates</h1>
