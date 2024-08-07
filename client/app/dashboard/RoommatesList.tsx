@@ -2,21 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getRoommates, addRoommate } from '../services/roommateService';
+import { getUserBalances } from '../services/expenseService';
 
 export interface Roommate {
   id: number;
   name: string;
-  totalOwed?: number;  // This might be calculated on the frontend or returned from the backend
 }
 
 export default function RoommatesList() {
   const [roommates, setRoommates] = useState<Roommate[]>([]);
+  const [balances, setBalances] = useState<{ [key: number]: number }>({});
   const [selectedRoommate, setSelectedRoommate] = useState<Roommate | null>(null);
   const [newRoommateName, setNewRoommateName] = useState('');
   const [showAddRoommateModal, setShowAddRoommateModal] = useState(false);
 
   useEffect(() => {
     fetchRoommates();
+    fetchBalances();
   }, []);
 
   const fetchRoommates = async () => {
@@ -25,6 +27,15 @@ export default function RoommatesList() {
       setRoommates(fetchedRoommates);
     } catch (error) {
       console.error('Error fetching roommates:', error);
+    }
+  };
+
+  const fetchBalances = async () => {
+    try {
+      const fetchedBalances = await getUserBalances();
+      setBalances(fetchedBalances);
+    } catch (error) {
+      console.error('Error fetching balances:', error);
     }
   };
 
@@ -39,6 +50,18 @@ export default function RoommatesList() {
         console.error('Error adding roommate:', error);
       }
     }
+  };
+
+  const getBalanceDisplay = (balance: number) => {
+    if (balance === 0) return 'Settled';
+    if (balance > 0) return `Owes you $${balance.toFixed(2)}`;
+    return `You owe $${Math.abs(balance).toFixed(2)}`;
+  };
+
+  const getBalanceColor = (balance: number) => {
+    if (balance === 0) return 'text-gray-500';
+    if (balance > 0) return 'text-green-600';
+    return 'text-red-600';
   };
 
   return (
@@ -68,12 +91,8 @@ export default function RoommatesList() {
                 onClick={() => setSelectedRoommate(roommate)}
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{roommate.name}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                  roommate.totalOwed > 0 ? 'text-green-600' : roommate.totalOwed < 0 ? 'text-red-600' : 'text-gray-500'
-                }`}>
-                  {roommate.totalOwed > 0 ? `Owes you $${roommate.totalOwed.toFixed(2)}` :
-                   roommate.totalOwed < 0 ? `You owe $${Math.abs(roommate.totalOwed).toFixed(2)}` :
-                   'Settled'}
+                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)}`}>
+                  {getBalanceDisplay(balances[roommate.id] || 0)}
                 </td>
               </tr>
             ))}
@@ -85,12 +104,8 @@ export default function RoommatesList() {
           <h3 className="text-lg font-semibold mb-4">Roommate Details</h3>
           <p><strong>Name:</strong> {selectedRoommate.name}</p>
           <p><strong>Balance:</strong>
-            <span className={`font-medium ${
-              selectedRoommate.totalOwed > 0 ? 'text-green-600' : selectedRoommate.totalOwed < 0 ? 'text-red-600' : 'text-gray-500'
-            }`}>
-              {selectedRoommate.totalOwed > 0 ? ` Owes you $${selectedRoommate.totalOwed.toFixed(2)}` :
-               selectedRoommate.totalOwed < 0 ? ` You owe $${Math.abs(selectedRoommate.totalOwed).toFixed(2)}` :
-               ' Settled'}
+            <span className={`font-medium ${getBalanceColor(balances[selectedRoommate.id] || 0)}`}>
+              {getBalanceDisplay(balances[selectedRoommate.id] || 0)}
             </span>
           </p>
           <div className="mt-4">

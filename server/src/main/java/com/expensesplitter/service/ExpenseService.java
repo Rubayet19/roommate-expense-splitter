@@ -18,14 +18,18 @@ public class ExpenseService {
     private final UserRepository userRepository;
     private final RoommateRepository roommateRepository;
 
+    private final SettlementRepository settlementRepository;
+
     public ExpenseService(ExpenseRepository expenseRepository,
                           ExpenseParticipantRepository expenseParticipantRepository,
                           UserRepository userRepository,
-                          RoommateRepository roommateRepository) {
+                          RoommateRepository roommateRepository,
+                          SettlementRepository settlementRepository) {
         this.expenseRepository = expenseRepository;
         this.expenseParticipantRepository = expenseParticipantRepository;
         this.userRepository = userRepository;
         this.roommateRepository = roommateRepository;
+        this.settlementRepository=settlementRepository;
     }
 
 
@@ -199,16 +203,28 @@ public class ExpenseService {
 
     public Map<Long, BigDecimal> calculateBalances(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        List<Expense> userExpenses = expenseRepository.findByUser(user);
         Map<Long, BigDecimal> balances = new HashMap<>();
 
+        // Calculate balances from expenses
+        List<Expense> userExpenses = expenseRepository.findByUser(user);
         for (Expense expense : userExpenses) {
             List<ExpenseParticipant> participants = expenseParticipantRepository.findByExpense(expense);
             for (ExpenseParticipant participant : participants) {
                 Long participantId = participant.getParticipant().getId();
                 BigDecimal shareAmount = participant.getShareAmount();
-
                 balances.merge(participantId, shareAmount, BigDecimal::add);
+            }
+        }
+
+        // Adjust balances based on settlements
+        List<Settlement> userSettlements = settlementRepository.findByPayerIdOrReceiverId(userId, userId);
+        for (Settlement settlement : userSettlements) {
+            if (settlement.getPayerId().equals(userId)) {
+                // User paid, so reduce the balance
+                balances.merge(settlement.getReceiverId(), settlement.getAmount().negate(), BigDecimal::add);
+            } else {
+                // User received, so increase the balance
+                balances.merge(settlement.getPayerId(), settlement.getAmount(), BigDecimal::add);
             }
         }
 

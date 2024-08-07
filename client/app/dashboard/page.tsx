@@ -7,7 +7,7 @@ import AllExpenses from './AllExpenses';
 import RoommatesList from './RoommatesList';
 import AddExpenseForm from './components/AddExpenseForm';
 import SettleUpForm from './components/SettleUpForm';
-import { Roommate, Expense, User } from './types/shared';
+import { Roommate, Expense, User, SettlementDTO } from './types/shared';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { logout } from '../services/authService';
 import { useRouter } from 'next/navigation';
@@ -17,6 +17,7 @@ import { getUserExpenses } from '../services/expenseService';
 import { ExpenseDTO } from './types/shared';
 import { getCurrentUser } from '../services/userService';
 import { getUserBalances } from '../services/expenseService';
+import { createSettlement } from '../services/settlementService';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -31,6 +32,10 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const totalBalance = Object.values(balances).reduce((sum, balance) => sum + balance, 0);
+  const youOwe = Object.values(balances).filter(balance => balance > 0).reduce((sum, balance) => sum + balance, 0);
+  const youAreOwed = Object.values(balances).filter(balance => balance < 0).reduce((sum, balance) => sum + Math.abs(balance), 0);
+  
 
   useEffect(() => {
     fetchCurrentUser();
@@ -85,58 +90,23 @@ export default function Dashboard() {
     try {
       const addedExpense = await addExpense(expense);
       setExpenses(prev => [...prev, addedExpense]);
-      fetchExpenses(); // Refresh expenses after adding a new one
+      fetchExpenses();
+      fetchBalances(); // Fetch updated balances
     } catch (error) {
       console.error('Error adding expense:', error);
     }
   };
 
-  const youOwe = Object.entries(balances).filter(([_, balance]) => balance > 0);
-  const youAreOwed = Object.entries(balances).filter(([_, balance]) => balance < 0);
 
-  const renderBalanceColumn = (title: string, balances: [string, number][], colorClass: string) => (
-    <div className="bg-white p-4 rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <ul>
-        {balances.map(([roommateId, balance]) => {
-          const roommate = roommates.find(r => r.id === parseInt(roommateId));
-          return (
-            <li key={roommateId} className="flex items-center mb-2">
-              <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
-              <span className="flex-grow">{roommate?.name || 'Unknown'}</span>
-              <span className={`font-semibold ${colorClass}`}>
-                {title === "YOU OWE" ? `you owe $${balance.toFixed(2)}` : `owes you $${Math.abs(balance).toFixed(2)}`}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-  // const updateBalances = (payer: string, receiver: string, amount: number) => {
-  //   setBalances(prevBalances => {
-  //     const newBalances = { ...prevBalances };
-  //     newBalances[payer] = (newBalances[payer] || 0) - amount;
-  //     newBalances[receiver] = (newBalances[receiver] || 0) + amount;
-  //     return newBalances;
-  //   });
-  // };
-
-  // Mock balance data
-  // const totalBalance = balances[currentUser.id] || 0;
-  // const youOwe = Object.entries(balances)
-  //   .filter(([id, balance]) => id !== currentUser.id && balance > 0)
-  //   .reduce((sum, [_, balance]) => sum + balance, 0);
-  // const youAreOwed = Object.entries(balances)
-  //   .filter(([id, balance]) => id !== currentUser.id && balance < 0)
-  //   .reduce((sum, [_, balance]) => sum + Math.abs(balance), 0);
-
-
-  // const handleSettleUp = (payer: string, receiver: string, amount: number) => {
-  //   console.log(`${payer} paid ${receiver} $${amount}`);
-  //   updateBalances(payer, receiver, amount);
-  //   setShowSettleUpForm(false);
-  // };
+  const handleSettleUp = async (settlement: SettlementDTO) => {
+    try {
+      await createSettlement(settlement);
+      fetchBalances(); // Fetch updated balances
+      setShowSettleUpForm(false); // Close the form after successful settlement
+    } catch (error) {
+      console.error('Error creating settlement:', error);
+    }
+  };
 
 
 
@@ -222,22 +192,33 @@ export default function Dashboard() {
               </div>
               
               {/* Balance Overview */}
-              {/* <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-3 gap-4 ">
+              <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-3 gap-4">
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Total Balance</h2>
-                  <p className={`text-xl font-bold ${totalBalance < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    ${Math.abs(totalBalance).toFixed(2)}
+                  <p className={`text-xl font-bold ${totalBalance !== 0 ? (totalBalance > 0 ? 'text-red-500' : 'text-green-500') : 'text-gray-500'}`}>
+                    {totalBalance === 0 ? '$0' : (
+                      <>
+                        {youAreOwed<youOwe ? '-' : '+'}${Math.abs(totalBalance).toFixed(2)}
+                        <span className="text-sm font-normal ml-1">
+                          
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold mb-2">You Owe</h2>
-                  <p className="text-xl font-bold text-red-500">${youOwe.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-red-500">
+                    ${youOwe.toFixed(2)}
+                  </p>
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold mb-2">You are Owed</h2>
-                  <p className="text-xl font-bold text-green-500">${youAreOwed.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-green-500">
+                    ${youAreOwed.toFixed(2)}
+                  </p>
                 </div>
-              </div> */}
+              </div>
 
               {/* Detailed Balances */}
               <div className="grid grid-cols-2 gap-6">
@@ -260,7 +241,7 @@ export default function Dashboard() {
                 </div>
                 <div className="bg-slate-100 p-4 rounded-lg ">
                   <h2 className="text-xl font-semibold mb-4">YOU ARE OWED</h2>
-                  <ul>
+                  <ul className='pt-4'>
                     {Object.entries(balances)
                       .filter(([_, balance]) => balance < 0)
                       .map(([roommateId, balance]) => {
@@ -301,13 +282,14 @@ export default function Dashboard() {
           roommates={roommates}
         />
       )}
-      {showSettleUpForm && currentUser && (
-        <SettleUpForm
-          onClose={() => setShowSettleUpForm(false)}
-          currentUser={currentUser}
-          roommates={roommates}
-        />
-      )}
+{showSettleUpForm && currentUser && (
+  <SettleUpForm
+    onClose={() => setShowSettleUpForm(false)}
+    onSettleUp={handleSettleUp}
+    currentUser={currentUser}
+    roommates={roommates}
+  />
+)}
     </div>
   </ProtectedRoute>
   );

@@ -1,36 +1,31 @@
 // SettleUpForm.tsx
 
 import React, { useState } from 'react';
-import { User, Roommate } from '../types/shared';
-import { createSettlement } from '../../services/settlementService';
+import { User, Roommate, SettlementDTO } from '../types/shared';
 
 interface SettleUpFormProps {
   onClose: () => void;
-  currentUser: User|null;
+  onSettleUp: (settlement: SettlementDTO) => void;
+  currentUser: User;
   roommates: Roommate[];
 }
 
-export default function SettleUpForm({ onClose, currentUser, roommates }: SettleUpFormProps) {
-  const [payer, setPayer] = useState<string>(currentUser?.id.toString() || '');
+export default function SettleUpForm({ onClose, onSettleUp, currentUser, roommates }: SettleUpFormProps) {
+  const [payer, setPayer] = useState<string>(currentUser.id.toString());
   const [receiver, setReceiver] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (payer && receiver && amount && date) {
-      try {
-        await createSettlement({
-          payerId: parseInt(payer),
-          receiverId: parseInt(receiver),
-          amount: parseFloat(amount),
-          date: date,
-        });
-        onClose();
-      } catch (error) {
-        console.error('Error creating settlement:', error);
-        // Handle error (e.g., show error message to user)
-      }
+      onSettleUp({
+        payerId: parseInt(payer),
+        receiverId: parseInt(receiver),
+        amount: parseFloat(amount),
+        date: date,
+      });
+      onClose();
     }
   };
 
@@ -38,8 +33,7 @@ export default function SettleUpForm({ onClose, currentUser, roommates }: Settle
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
       <div className="bg-white p-5 rounded-lg shadow-xl w-96">
         <h2 className="text-xl font-semibold mb-4">Settle Up</h2>
-        {currentUser ? (
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Who paid?</label>
             <select
@@ -112,9 +106,6 @@ export default function SettleUpForm({ onClose, currentUser, roommates }: Settle
             </button>
           </div>
         </form>
-        ) : (
-          <p>Error: User information not available.</p>
-        )}
       </div>
     </div>
   );
