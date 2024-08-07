@@ -13,7 +13,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -60,6 +62,13 @@ public class ExpenseController {
         Long loggedInUserId = getLoggedInUserId();
         List<ExpenseDTO> expenses = expenseService.getUserExpenses(loggedInUserId);
         return ResponseEntity.ok(expenses);
+    }
+
+    @GetMapping("/balances")
+    public ResponseEntity<Map<Long, BigDecimal>> getUserBalances() {
+        Long loggedInUserId = getLoggedInUserId();
+        Map<Long, BigDecimal> balances = expenseService.calculateBalances(loggedInUserId);
+        return ResponseEntity.ok(balances);
     }
 
     @GetMapping("/{id}")

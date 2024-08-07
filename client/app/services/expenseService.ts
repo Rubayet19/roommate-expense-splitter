@@ -10,3 +10,8 @@ export const getUserExpenses = async (): Promise<ExpenseDTO[]> => {
   const response = await api.get<ExpenseDTO[]>('/expenses');
   return response.data;
 };
+
+export const getUserBalances = async (): Promise<{ [key: number]: number }> => {
+  const response = await api.get<{ [key: number]: number }>('/expenses/balances');
+  return response.data;
+};

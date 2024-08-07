@@ -1,89 +1,85 @@
-'use client';
+// SettleUpForm.tsx
+
 import React, { useState } from 'react';
-import { Roommate } from '../types/shared';
+import { User, Roommate } from '../types/shared';
+import { createSettlement } from '../../services/settlementService';
 
 interface SettleUpFormProps {
-  roommates: Roommate[];
-  currentUser: Roommate;
-  onSettleUp: (payer: string, receiver: string, amount: number, date: string) => void;
   onClose: () => void;
+  currentUser: User|null;
+  roommates: Roommate[];
 }
 
-export default function SettleUpForm({ roommates, currentUser, onSettleUp, onClose }: SettleUpFormProps) {
-  const [payer, setPayer] = useState<string>('');
+export default function SettleUpForm({ onClose, currentUser, roommates }: SettleUpFormProps) {
+  const [payer, setPayer] = useState<string>(currentUser?.id.toString() || '');
   const [receiver, setReceiver] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
-  const [date, setDate] = useState<string>('');
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const allUsers = [currentUser, ...roommates];
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (payer && receiver && amount && date) {
-      onSettleUp(payer, receiver, parseFloat(amount), date);
-      onClose();
+      try {
+        await createSettlement({
+          payerId: parseInt(payer),
+          receiverId: parseInt(receiver),
+          amount: parseFloat(amount),
+          date: date,
+        });
+        onClose();
+      } catch (error) {
+        console.error('Error creating settlement:', error);
+        // Handle error (e.g., show error message to user)
+      }
     }
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
-      <div className="bg-white p-5 rounded-lg shadow-xl w-96 relative">
-        <button 
-          onClick={onClose}
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-        >
-          ✕
-        </button>
+      <div className="bg-white p-5 rounded-lg shadow-xl w-96">
         <h2 className="text-xl font-semibold mb-4">Settle Up</h2>
-        <form onSubmit={handleSubmit}>
+        {currentUser ? (
+          <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="payer" className="block text-gray-700 text-sm font-bold mb-2">
-              Who paid?
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Who paid?</label>
             <select
-              id="payer"
               value={payer}
               onChange={(e) => setPayer(e.target.value)}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
+              className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             >
-              <option value="">Select payer</option>
-              {allUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.id === currentUser.id ? `${user.name} (You)` : user.name}
+              <option value={currentUser.id}>{currentUser.username} (You)</option>
+              {roommates.map((roommate) => (
+                <option key={roommate.id} value={roommate.id}>
+                  {roommate.name}
                 </option>
               ))}
             </select>
           </div>
           <div className="mb-4">
-            <label htmlFor="receiver" className="block text-gray-700 text-sm font-bold mb-2">
-              Who received?
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Who received?</label>
             <select
-              id="receiver"
               value={receiver}
               onChange={(e) => setReceiver(e.target.value)}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
+              className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             >
               <option value="">Select receiver</option>
-              {allUsers.filter((r) => r.id !== payer).map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.id === currentUser.id ? `${user.name} (You)` : user.name}
-                </option>
-              ))}
+              {payer === currentUser.id.toString()
+                ? roommates.map((roommate) => (
+                    <option key={roommate.id} value={roommate.id}>
+                      {roommate.name}
+                    </option>
+                  ))
+                : <option value={currentUser.id}>{currentUser.username} (You)</option>
+              }
             </select>
           </div>
           <div className="mb-4">
-            <label htmlFor="amount" className="block text-gray-700 text-sm font-bold mb-2">
-              Amount
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Amount</label>
             <input
               type="number"
-              id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               placeholder="Enter amount"
               step="0.01"
               min="0"
@@ -91,25 +87,34 @@ export default function SettleUpForm({ roommates, currentUser, onSettleUp, onClo
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="date" className="block text-gray-700 text-sm font-bold mb-2">
-              Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Date</label>
             <input
               type="date"
-              id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               required
             />
           </div>
-          <button
-            type="submit"
-            className="bg-black hover:bg-slate-700 text-white text-sm font-semibold py-2 px-4 rounded mr-2 py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Settle Up
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Settle Up
+            </button>
+          </div>
         </form>
+        ) : (
+          <p>Error: User information not available.</p>
+        )}
       </div>
     </div>
   );

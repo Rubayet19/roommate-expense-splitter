@@ -16,6 +16,7 @@ import { addExpense } from '../services/expenseService';
 import { getUserExpenses } from '../services/expenseService';
 import { ExpenseDTO } from './types/shared';
 import { getCurrentUser } from '../services/userService';
+import { getUserBalances } from '../services/expenseService';
 
 export default function Dashboard() {
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function Dashboard() {
   const [showAddExpenseForm, setShowAddExpenseForm] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSettleUpForm, setShowSettleUpForm] = useState(false);
-  const [balances, setBalances] = useState<{ [key: string]: number }>({});
+  const [balances, setBalances] = useState<{ [key: number]: number }>({});
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [roommates, setRoommates] = useState<Roommate[]>([]);
@@ -35,6 +36,7 @@ export default function Dashboard() {
     fetchCurrentUser();
     fetchRoommates();
     fetchExpenses();
+    fetchBalances();
   }, []);
 
   const fetchCurrentUser = async () => {
@@ -44,6 +46,15 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching current user:', error);
       // Handle error (e.g., redirect to login page)
+    }
+  };
+
+  const fetchBalances = async () => {
+    try {
+      const fetchedBalances = await getUserBalances();
+      setBalances(fetchedBalances);
+    } catch (error) {
+      console.error('Error fetching balances:', error);
     }
   };
 
@@ -79,6 +90,29 @@ export default function Dashboard() {
       console.error('Error adding expense:', error);
     }
   };
+
+  const youOwe = Object.entries(balances).filter(([_, balance]) => balance > 0);
+  const youAreOwed = Object.entries(balances).filter(([_, balance]) => balance < 0);
+
+  const renderBalanceColumn = (title: string, balances: [string, number][], colorClass: string) => (
+    <div className="bg-white p-4 rounded-lg shadow">
+      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+      <ul>
+        {balances.map(([roommateId, balance]) => {
+          const roommate = roommates.find(r => r.id === parseInt(roommateId));
+          return (
+            <li key={roommateId} className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
+              <span className="flex-grow">{roommate?.name || 'Unknown'}</span>
+              <span className={`font-semibold ${colorClass}`}>
+                {title === "YOU OWE" ? `you owe $${balance.toFixed(2)}` : `owes you $${Math.abs(balance).toFixed(2)}`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
   // const updateBalances = (payer: string, receiver: string, amount: number) => {
   //   setBalances(prevBalances => {
   //     const newBalances = { ...prevBalances };
@@ -207,24 +241,38 @@ export default function Dashboard() {
 
               {/* Detailed Balances */}
               <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div className="bg-slate-100 p-4 rounded-lg ">
                   <h2 className="text-xl font-semibold mb-4">YOU OWE</h2>
-                  <ul>
-                    <li className="flex items-center mb-2">
-                      <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
-                      <span className="flex-grow">Roommate 1</span>
-                      <span className="font-semibold text-red-500">you owe $25.00</span>
-                    </li>
+                  <ul className='pt-4'>
+                    {Object.entries(balances)
+                      .filter(([_, balance]) => balance > 0)
+                      .map(([roommateId, balance]) => {
+                        const roommate = roommates.find(r => r.id === parseInt(roommateId));
+                        return (
+                          <li key={roommateId} className="flex items-center mb-5">
+                            <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
+                            <span className="flex-grow">{roommate?.name || 'Unknown'}</span>
+                            <span className="font-semibold text-red-500">you owe ${balance.toFixed(2)}</span>
+                          </li>
+                        );
+                      })}
                   </ul>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div className="bg-slate-100 p-4 rounded-lg ">
                   <h2 className="text-xl font-semibold mb-4">YOU ARE OWED</h2>
                   <ul>
-                    <li className="flex items-center mb-2">
-                      <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
-                      <span className="flex-grow">Roommate 2</span>
-                      <span className="font-semibold text-green-500">owes you $15.00</span>
-                    </li>
+                    {Object.entries(balances)
+                      .filter(([_, balance]) => balance < 0)
+                      .map(([roommateId, balance]) => {
+                        const roommate = roommates.find(r => r.id === parseInt(roommateId));
+                        return (
+                          <li key={roommateId} className="flex items-center mb-2">
+                            <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
+                            <span className="flex-grow">{roommate?.name || 'Unknown'}</span>
+                            <span className="font-semibold text-green-500">owes you ${Math.abs(balance).toFixed(2)}</span>
+                          </li>
+                        );
+                      })}
                   </ul>
                 </div>
               </div>
@@ -253,14 +301,13 @@ export default function Dashboard() {
           roommates={roommates}
         />
       )}
-  {/* {showSettleUpForm && (
-    <SettleUpForm 
-      onClose={() => setShowSettleUpForm(false)}
-      onSettleUp={handleSettleUp}
-      currentUser={currentUser}
-      roommates={roommates}
-    />
-  )} */}
+      {showSettleUpForm && currentUser && (
+        <SettleUpForm
+          onClose={() => setShowSettleUpForm(false)}
+          currentUser={currentUser}
+          roommates={roommates}
+        />
+      )}
     </div>
   </ProtectedRoute>
   );

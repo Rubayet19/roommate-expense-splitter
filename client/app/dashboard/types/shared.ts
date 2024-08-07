@@ -36,8 +36,8 @@ export interface ExpenseDTO {
 }
 
 export interface SettlementDTO {
-  payerId: string;
-  receiverId: string;
+  payerId: number;
+  receiverId: number;
   amount: number;
   date: string;
 }
