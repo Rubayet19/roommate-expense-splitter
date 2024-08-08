@@ -1,9 +1,11 @@
 package com.expensesplitter.controller;
 
 import com.expensesplitter.dto.ExpenseDTO;
+import com.expensesplitter.dto.ExpenseParticipantDTO;
 import com.expensesplitter.entity.Expense;
 import com.expensesplitter.entity.User;
 import com.expensesplitter.repository.UserRepository;
+import com.expensesplitter.service.ExpenseParticipantService;
 import com.expensesplitter.service.ExpenseService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -25,9 +27,12 @@ public class ExpenseController {
     private final ExpenseService expenseService;
     private final UserRepository userRepository;
 
-    public ExpenseController(ExpenseService expenseService, UserRepository userRepository) {
+    private final ExpenseParticipantService expenseParticipantService;
+
+    public ExpenseController(ExpenseService expenseService, UserRepository userRepository, ExpenseParticipantService expenseParticipantService) {
         this.expenseService = expenseService;
         this.userRepository = userRepository;
+        this.expenseParticipantService=expenseParticipantService;
     }
 
     @PostMapping
@@ -98,5 +103,12 @@ public class ExpenseController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return user.getId();
+    }
+    @GetMapping("/participants")
+    public ResponseEntity<List<ExpenseParticipantDTO>> getUserExpenseParticipants() {
+        Long loggedInUserId = getLoggedInUserId();
+
+        List<ExpenseParticipantDTO> participants = expenseParticipantService.getUserExpenseParticipants(loggedInUserId);
+        return ResponseEntity.ok(participants);
     }
 }
