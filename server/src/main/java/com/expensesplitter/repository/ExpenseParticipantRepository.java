@@ -15,6 +15,8 @@ public interface ExpenseParticipantRepository extends JpaRepository<ExpenseParti
     List<ExpenseParticipant> findByParticipant(Roommate participant);
     void deleteByExpense(Expense expense);
 
+
+
     // New methods
     List<ExpenseParticipant> findByParticipantId(Long participantId);
     void deleteByParticipantId(Long participantId);

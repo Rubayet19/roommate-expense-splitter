@@ -21,8 +21,25 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   });
   const [newRoommate, setNewRoommate] = useState('');
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
+  const [paidByMultiple, setPaidByMultiple] = useState(false);
+  const [paidByAmounts, setPaidByAmounts] = useState<{ [key: number]: string }>({});
   const paidByRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const calculatePreciseShares = (totalAmount: number, participantCount: number): { [key: number]: string } => {
+    const equalShare = Math.floor(totalAmount * 100 / participantCount) / 100;
+    const remainder = totalAmount - (equalShare * participantCount);
+    
+    const preciseShares: { [key: number]: string } = {};
+    const participants = [currentUser.id, ...expense.splitWith];
+    
+    participants.forEach((id, index) => {
+      const share = equalShare + (index < Math.round(remainder * 100) ? 0.01 : 0);
+      preciseShares[id] = share.toFixed(2);
+    });
+    
+    return preciseShares;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,19 +57,22 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   useEffect(() => {
     if (expense.splitType === 'EQUAL' && expense.amount) {
       const totalAmount = parseFloat(expense.amount);
-      const perPersonAmount = (totalAmount / (expense.splitWith.length + 1)).toFixed(2);
-      const newSplitDetails: { [key: number]: string } = {};
+      const participantCount = expense.splitWith.length + 1;
+      const preciseShares = calculatePreciseShares(totalAmount, participantCount);
       
-      [currentUser.id, ...expense.splitWith].forEach(id => {
-        newSplitDetails[id] = perPersonAmount;
-      });
-
       setExpense(prev => ({
         ...prev,
-        splitDetails: newSplitDetails
+        splitDetails: preciseShares
       }));
     }
   }, [expense.splitType, expense.amount, expense.splitWith, currentUser.id]);
+
+  useEffect(() => {
+    if (expense.splitType === 'CUSTOM') {
+      setPaidByMultiple(false);
+      setExpense(prev => ({ ...prev, paidBy: [currentUser.id] }));
+    }
+  }, [expense.splitType]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -80,19 +100,28 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
     });
   };
 
-  const handlePaidByChange = (id: number) => {
-    setExpense(prev => {
-      const newPaidBy = prev.paidBy.includes(id)
-        ? prev.paidBy.filter(payerId => payerId !== id)
-        : [...prev.paidBy, id];
-
-      // Ensure at least one payer is selected
-      if (newPaidBy.length === 0) {
-        newPaidBy.push(currentUser.id);
+  const handlePaidByChange = (id: number | 'multiple') => {
+    if (expense.splitType === 'CUSTOM') {
+      setExpense(prev => ({ ...prev, paidBy: [id as number] }));
+    } else {
+      if (id === 'multiple') {
+        setPaidByMultiple(true);
+        setExpense(prev => ({ ...prev, paidBy: [currentUser.id, ...prev.splitWith] }));
+        const initialPaidByAmounts = [currentUser.id, ...expense.splitWith].reduce((acc, id) => {
+          acc[id] = '0';
+          return acc;
+        }, {} as { [key: number]: string });
+        setPaidByAmounts(initialPaidByAmounts);
+      } else {
+        setPaidByMultiple(false);
+        setExpense(prev => ({ ...prev, paidBy: [id as number] }));
+        setPaidByAmounts({});
       }
+    }
+  };
 
-      return { ...prev, paidBy: newPaidBy };
-    });
+  const handlePaidByAmountChange = (id: number, amount: string) => {
+    setPaidByAmounts(prev => ({ ...prev, [id]: amount }));
   };
 
   const handleSplitDetailChange = (id: number, amount: string) => {
@@ -119,24 +148,26 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
     setError(null);
 
     const totalAmount = parseFloat(expense.amount);
-    const totalShares = Object.values(expense.splitDetails).reduce((sum, share) => sum + Math.abs(parseFloat(share)), 0);
+    const totalShares = Object.values(expense.splitDetails).reduce((sum, share) => sum + parseFloat(share), 0);
 
-    if (expense.splitType === 'CUSTOM' && totalShares > totalAmount) {
-      setError(`The sum of individual shares (${totalShares.toFixed(2)}) exceeds the total amount (${totalAmount.toFixed(2)})`);
+    if (Math.abs(totalShares - totalAmount) > 0.01) {
+      setError(`The sum of individual shares (${totalShares.toFixed(2)}) does not match the total amount (${totalAmount.toFixed(2)})`);
       return;
+    }
+
+    if (paidByMultiple && expense.splitType === 'EQUAL') {
+      const totalPaidBy = Object.values(paidByAmounts).reduce((sum, amount) => sum + parseFloat(amount || '0'), 0);
+      if (Math.abs(totalPaidBy - totalAmount) > 0.01) {
+        setError(`The sum of paid amounts (${totalPaidBy.toFixed(2)}) does not match the total amount (${totalAmount.toFixed(2)})`);
+        return;
+      }
     }
 
     const submittableExpense: ExpenseDTO = {
       ...expense,
-      paidBy: expense.paidBy.map(Number),
+      paidBy: paidByMultiple && expense.splitType === 'EQUAL' ? Object.keys(paidByAmounts).map(Number) : expense.paidBy,
       splitWith: expense.splitWith.map(Number),
-      splitDetails: Object.entries(expense.splitDetails).reduce((acc, [key, value]) => {
-        const numKey = Number(key);
-        if (!isNaN(numKey)) {
-          acc[numKey] = value;
-        }
-        return acc;
-      }, {} as { [key: number]: string })
+      splitDetails: paidByMultiple && expense.splitType === 'EQUAL' ? paidByAmounts : expense.splitDetails
     };
 
     console.log('Submitting expense:', submittableExpense);
@@ -162,15 +193,12 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 <label className="w-1/3">{isCurrentUser ? 'You' : roommates.find(r => r.id === id)?.name}:</label>
                 <input
                   type="number"
-                  value={Math.abs(amount).toFixed(2)}
+                  value={amount.toFixed(2)}
                   onChange={(e) => handleSplitDetailChange(id, e.target.value)}
                   placeholder="Share amount"
                   className="w-2/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   readOnly={expense.splitType === 'EQUAL'}
                 />
-                <span className="ml-2">
-                  {expense.paidBy.includes(id) ? '(Paid)' : '(Owes)'}
-                </span>
               </div>
             );
           })}
@@ -183,7 +211,6 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
       </div>
     );
   };
-
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
@@ -202,14 +229,14 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 <button
                   key={roommate.id}
                   type="button"
-                  onClick={() => handleSplitWithChange(Number(roommate.id))}
+                  onClick={() => handleSplitWithChange(roommate.id)}
                   className={`px-2 py-1 rounded-full text-sm ${
-                    expense.splitWith.includes(Number(roommate.id))
+                    expense.splitWith.includes(roommate.id)
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-200 text-gray-700'
                   }`}
                 >
-                  {roommate.name} {expense.splitWith.includes(Number(roommate.id)) && '✕'}
+                  {roommate.name} {expense.splitWith.includes(roommate.id) && '✕'}
                 </button>
               ))}
               <input
@@ -263,9 +290,8 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 onClick={() => setShowPaidByDropdown(!showPaidByDropdown)}
                 className="ml-2 p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                {expense.paidBy.length === 1 
-                  ? (expense.paidBy[0] === currentUser.id ? currentUser.username : roommates.find(r => r.id === expense.paidBy[0])?.name)
-                  : `${expense.paidBy.length} people`
+                {paidByMultiple ? 'Multiple people' : 
+                  (expense.paidBy[0] === currentUser.id ? currentUser.username : roommates.find(r => r.id === expense.paidBy[0])?.name)
                 } ▼
               </button>
             </p>
@@ -274,8 +300,8 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 <div className="p-2">
                   <label className="flex items-center">
                     <input
-                      type="checkbox"
-                      checked={expense.paidBy.includes(currentUser.id)}
+                      type="radio"
+                      checked={!paidByMultiple && expense.paidBy[0] === currentUser.id}
                       onChange={() => handlePaidByChange(currentUser.id)}
                       className="mr-2"
                     />
@@ -286,8 +312,8 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                     return roommate && (
                       <label key={roommateId} className="flex items-center mt-1">
                         <input
-                          type="checkbox"
-                          checked={expense.paidBy.includes(roommateId)}
+                          type="radio"
+                          checked={!paidByMultiple && expense.paidBy[0] === roommateId}
                           onChange={() => handlePaidByChange(roommateId)}
                           className="mr-2"
                         />
@@ -295,10 +321,44 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                       </label>
                     );
                   })}
+                  {expense.splitType === 'EQUAL' && (
+                    <label className="flex items-center mt-1">
+                      <input
+                        type="radio"
+                        checked={paidByMultiple}
+                        onChange={() => handlePaidByChange('multiple')}
+                        className="mr-2"
+                      />
+                      Multiple people
+                    </label>
+                  )}
                 </div>
               </div>
             )}
-            <span className="ml-2">and split</span>
+          </div>
+          {paidByMultiple && expense.splitType === 'EQUAL' && (
+            <div className="mb-4">
+              <h4 className="text-lg font-medium mb-2">Paid by amounts:</h4>
+              <div className="space-y-2">
+              {[currentUser.id, ...expense.splitWith].map(id => (
+                  <div key={id} className="flex items-center">
+                    <label className="w-1/3">
+                      {id === currentUser.id ? 'You' : roommates.find(r => r.id === id)?.name}:
+                    </label>
+                    <input
+                      type="number"
+                      value={paidByAmounts[id] || ''}
+                      onChange={(e) => handlePaidByAmountChange(id, e.target.value)}
+                      placeholder="Amount paid"
+                      className="w-2/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="mb-4">
+            <span className="text-sm text-gray-700">Split</span>
             <select
               name="splitType"
               value={expense.splitType}
@@ -311,7 +371,7 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
           </div>
           {expense.splitType === 'EQUAL' && (
             <p className="mb-4 text-sm text-gray-700">
-              ${((parseFloat(expense.amount) || 0) / (expense.splitWith.length + 1)).toFixed(2)}/person
+              {Object.values(expense.splitDetails).map(share => `$${parseFloat(share).toFixed(2)}`).join(', ')} /person
             </p>
           )}
           {expense.splitType === 'CUSTOM' && renderSplitDetails()}
@@ -347,5 +407,5 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
         </form>
       </div>
     </div>
-  ); 
+  );
 }

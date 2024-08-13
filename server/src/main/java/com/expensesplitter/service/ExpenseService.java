@@ -303,8 +303,15 @@ public class ExpenseService {
     }
 
     public Map<Long, BigDecimal> calculateBalances(Long userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Map<Long, BigDecimal> balances = new HashMap<>();
+
+        // Find the user's roommate representations
+        List<Roommate> userRoommates = roommateRepository.findByUser(user);
+        if (userRoommates.isEmpty()) {
+            throw new RuntimeException("User's roommate representation not found");
+        }
 
         // Get all expenses associated with the user
         List<Expense> userExpenses = expenseRepository.findByUser(user);
@@ -312,29 +319,32 @@ public class ExpenseService {
         for (Expense expense : userExpenses) {
             List<ExpenseParticipant> participants = expenseParticipantRepository.findByExpense(expense);
 
-            if (expense.getIsPayer()) {
-                // User is the payer, so others owe money to the user
-                for (ExpenseParticipant participant : participants) {
-                    Long roommateId = participant.getParticipant().getId();
-                    BigDecimal shareAmount = participant.getShareAmount();
-                    // Negative shareAmount means user is owed money by this roommate
-                    balances.merge(roommateId, shareAmount, BigDecimal::add);
-                }
-            } else {
-                // User is not the payer, so user owes money to the payer
-                for (ExpenseParticipant participant : participants) {
-                    if (participant.getParticipant().getUser().getId().equals(userId)) {
-                        // This is the user's share
-                        BigDecimal shareAmount = participant.getShareAmount();
-                        // Positive shareAmount means user owes money to the expense payer
-                        balances.merge(expense.getUser().getId(), shareAmount.negate(), BigDecimal::add);
-                        break;
-                    }
-                }
+            for (ExpenseParticipant participant : participants) {
+                Long roommateId = participant.getParticipant().getId();
+                BigDecimal shareAmount = participant.getShareAmount();
+
+                // Positive shareAmount means roommate is owed money by the user
+                // We add it directly to the balance
+                balances.merge(roommateId, shareAmount, BigDecimal::add);
             }
         }
 
-        // Adjust balances based on settlements
+        // Get expenses where the user is a participant (not the creator)
+        for (Roommate userRoommate : userRoommates) {
+            List<ExpenseParticipant> userParticipations = expenseParticipantRepository.findByParticipant(userRoommate);
+
+            for (ExpenseParticipant participation : userParticipations) {
+                Expense expense = participation.getExpense();
+                Long payerId = expense.getUser().getId();
+                BigDecimal shareAmount = participation.getShareAmount();
+
+                // Negative shareAmount means user owes money to the payer
+                // We negate it because from the user's perspective, it's money owed
+                balances.merge(payerId, shareAmount.negate(), BigDecimal::add);
+            }
+        }
+
+        // Adjust balances based on settlements (keeping the original logic)
         List<Settlement> userSettlements = settlementRepository.findByPayerIdOrReceiverId(userId, userId);
         for (Settlement settlement : userSettlements) {
             if (settlement.getPayerId().equals(userId)) {
