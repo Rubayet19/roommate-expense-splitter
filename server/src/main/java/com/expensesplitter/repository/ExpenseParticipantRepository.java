@@ -21,4 +21,6 @@ public interface ExpenseParticipantRepository extends JpaRepository<ExpenseParti
     List<ExpenseParticipant> findByExpenseId(Long expenseId);
 
     Optional<ExpenseParticipant> findByExpenseAndParticipant(Expense expense, Roommate participant);
+
+    Optional<ExpenseParticipant> findByExpenseAndParticipantId(Expense updatedExpense, Long participantId);
 }

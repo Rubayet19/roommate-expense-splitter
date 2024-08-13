@@ -49,38 +49,139 @@ public class ExpenseService {
         Expense savedExpense = expenseRepository.save(expense);
 
         BigDecimal totalAmount = new BigDecimal(expenseDTO.getAmount());
-        BigDecimal totalShares = BigDecimal.ZERO;
 
-        for (Map.Entry<Long, String> entry : expenseDTO.getSplitDetails().entrySet()) {
-            Long participantId = entry.getKey();
-            BigDecimal shareAmount = new BigDecimal(entry.getValue());
-
-            if (!participantId.equals(loggedInUserId)) {
-                Roommate roommate = roommateRepository.findById(participantId)
-                        .orElseThrow(() -> new RuntimeException("Roommate not found"));
-
-                ExpenseParticipant participant = new ExpenseParticipant();
-                participant.setExpense(savedExpense);
-                participant.setParticipant(roommate);
-                participant.setShareAmount(shareAmount);
-                expenseParticipantRepository.save(participant);
-            }
-
-            totalShares = totalShares.add(shareAmount.abs());
+        if (expense.getSplitType() == Expense.SplitType.EQUAL) {
+            handleEqualSplit(expenseDTO, loggedInUserId, savedExpense, totalAmount);
+        } else if (expense.getSplitType() == Expense.SplitType.CUSTOM) {
+            handleCustomSplit(expenseDTO, loggedInUserId, savedExpense);
         }
 
-        // Calculate user's share
-        BigDecimal userShare = totalAmount.subtract(totalShares);
+        // Validate total amount
+        BigDecimal totalPaid = expenseDTO.getSplitDetails().values().stream()
+                .map(BigDecimal::new)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Add user's share to totalShares
-        totalShares = totalShares.add(userShare);
-
-        // Validate that the shares add up to the total amount
-        if (totalShares.setScale(2, RoundingMode.HALF_UP).compareTo(totalAmount.setScale(2, RoundingMode.HALF_UP)) != 0) {
-            throw new RuntimeException("The sum of shares (" + totalShares + ") does not match the total expense amount (" + totalAmount + ")");
+        if (totalPaid.compareTo(totalAmount) != 0) {
+            throw new RuntimeException("The sum of paid amounts (" + totalPaid + ") does not match the total expense amount (" + totalAmount + ")");
         }
 
         return savedExpense;
+    }
+
+    private void handleEqualSplit(ExpenseDTO expenseDTO, Long loggedInUserId, Expense savedExpense, BigDecimal totalAmount) {
+        int participantCount = expenseDTO.getSplitDetails().size();
+        BigDecimal equalShare = totalAmount.divide(new BigDecimal(participantCount), 2, RoundingMode.DOWN);
+        BigDecimal remainder = totalAmount.subtract(equalShare.multiply(new BigDecimal(participantCount)));
+
+        Map<Long, BigDecimal> preciseShares = new HashMap<>();
+        for (Long participantId : expenseDTO.getSplitDetails().keySet()) {
+            preciseShares.put(participantId, equalShare);
+        }
+
+        // Distribute the remainder cents
+        for (int i = 0; i < remainder.multiply(new BigDecimal(100)).intValue(); i++) {
+            Long participantId = (Long) preciseShares.keySet().toArray()[i % participantCount];
+            preciseShares.put(participantId, preciseShares.get(participantId).add(new BigDecimal("0.01")));
+        }
+
+        BigDecimal userPaidAmount = new BigDecimal(expenseDTO.getSplitDetails().get(loggedInUserId));
+        BigDecimal userShouldPay = preciseShares.get(loggedInUserId);
+
+        boolean isMultiplePayers = expenseDTO.getPaidBy().size() > 1;
+
+        if (isMultiplePayers) {
+            handleMultiplePayers(expenseDTO, loggedInUserId, savedExpense, preciseShares, userPaidAmount, userShouldPay);
+        } else {
+            handleSinglePayer(expenseDTO, loggedInUserId, savedExpense, preciseShares, userPaidAmount, userShouldPay);
+        }
+    }
+
+    private void handleCustomSplit(ExpenseDTO expenseDTO, Long loggedInUserId, Expense savedExpense) {
+        Long payerId = expenseDTO.getPaidBy().get(0);
+
+        if (payerId.equals(loggedInUserId)) {
+            // User is the payer
+            for (Map.Entry<Long, String> entry : expenseDTO.getSplitDetails().entrySet()) {
+                Long participantId = entry.getKey();
+                if (!participantId.equals(loggedInUserId)) {
+                    BigDecimal participantShare = new BigDecimal(entry.getValue());
+                    BigDecimal debt = participantShare.negate(); // User is owed this amount
+                    saveExpenseParticipant(savedExpense, participantId, debt);
+                }
+            }
+        } else {
+            // Roommate is the payer
+            BigDecimal userShare = new BigDecimal(expenseDTO.getSplitDetails().get(loggedInUserId));
+            BigDecimal userDebt = userShare; // User owes this amount to the payer
+            saveExpenseParticipant(savedExpense, payerId, userDebt);
+        }
+    }
+
+    private void handleMultiplePayers(ExpenseDTO expenseDTO, Long loggedInUserId, Expense savedExpense,
+                                      Map<Long, BigDecimal> preciseShares, BigDecimal userPaidAmount, BigDecimal userShouldPay) {
+        for (Map.Entry<Long, String> entry : expenseDTO.getSplitDetails().entrySet()) {
+            Long participantId = entry.getKey();
+            if (!participantId.equals(loggedInUserId)) {
+                BigDecimal participantPaidAmount = new BigDecimal(entry.getValue());
+                BigDecimal participantShouldPay = preciseShares.get(participantId);
+
+                BigDecimal userOwesParticipant = BigDecimal.ZERO;
+
+                if (userPaidAmount.compareTo(userShouldPay) < 0) {
+                    // User underpaid, might owe the participant
+                    BigDecimal userUnderpayment = userShouldPay.subtract(userPaidAmount);
+                    BigDecimal participantOverpayment = participantPaidAmount.subtract(participantShouldPay);
+                    userOwesParticipant = participantOverpayment.min(userUnderpayment);
+                } else if (participantPaidAmount.compareTo(participantShouldPay) < 0) {
+                    // Participant underpaid, user might be owed
+                    BigDecimal participantUnderpayment = participantShouldPay.subtract(participantPaidAmount);
+                    BigDecimal userOverpayment = userPaidAmount.subtract(userShouldPay);
+                    userOwesParticipant = participantUnderpayment.negate().max(userOverpayment.negate());
+                }
+
+                if (userOwesParticipant.compareTo(BigDecimal.ZERO) != 0) {
+                    saveExpenseParticipant(savedExpense, participantId, userOwesParticipant);
+                }
+            }
+        }
+    }
+
+    private void handleSinglePayer(ExpenseDTO expenseDTO, Long loggedInUserId, Expense savedExpense,
+                                   Map<Long, BigDecimal> preciseShares, BigDecimal userPaidAmount, BigDecimal userShouldPay) {
+        Long payerId = expenseDTO.getPaidBy().get(0);
+        BigDecimal paidAmount = new BigDecimal(expenseDTO.getSplitDetails().get(payerId));
+
+        if (payerId.equals(loggedInUserId)) {
+            // User is the payer
+            for (Map.Entry<Long, String> entry : expenseDTO.getSplitDetails().entrySet()) {
+                Long participantId = entry.getKey();
+                if (!participantId.equals(loggedInUserId)) {
+                    BigDecimal participantShare = preciseShares.get(participantId);
+                    BigDecimal debt = participantShare.negate(); // User is owed this amount
+                    saveExpenseParticipant(savedExpense, participantId, debt);
+                }
+            }
+        } else {
+            // Roommate is the payer
+            BigDecimal userShare = preciseShares.get(loggedInUserId);
+            BigDecimal userDebt = userShare; // User owes this amount to the payer
+            saveExpenseParticipant(savedExpense, payerId, userDebt);
+        }
+    }
+    private void saveExpenseParticipant(Expense expense, Long participantId, BigDecimal amount) {
+        Optional<Roommate> roommateOptional = roommateRepository.findById(participantId);
+
+        if (roommateOptional.isPresent()) {
+            Roommate roommate = roommateOptional.get();
+            ExpenseParticipant participant = new ExpenseParticipant();
+            participant.setExpense(expense);
+            participant.setParticipant(roommate);
+            participant.setShareAmount(amount);
+            expenseParticipantRepository.save(participant);
+        } else {
+            // Handle the case where the participantId is not a roommate (might be the user)
+            System.out.println("Participant with ID " + participantId + " is not a roommate. This might be the user.");
+        }
     }
 
     public List<ExpenseDTO> getUserExpenses(Long userId) {
@@ -205,14 +306,31 @@ public class ExpenseService {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         Map<Long, BigDecimal> balances = new HashMap<>();
 
-        // Calculate balances from expenses
+        // Get all expenses associated with the user
         List<Expense> userExpenses = expenseRepository.findByUser(user);
+
         for (Expense expense : userExpenses) {
             List<ExpenseParticipant> participants = expenseParticipantRepository.findByExpense(expense);
-            for (ExpenseParticipant participant : participants) {
-                Long participantId = participant.getParticipant().getId();
-                BigDecimal shareAmount = participant.getShareAmount();
-                balances.merge(participantId, shareAmount, BigDecimal::add);
+
+            if (expense.getIsPayer()) {
+                // User is the payer, so others owe money to the user
+                for (ExpenseParticipant participant : participants) {
+                    Long roommateId = participant.getParticipant().getId();
+                    BigDecimal shareAmount = participant.getShareAmount();
+                    // Negative shareAmount means user is owed money by this roommate
+                    balances.merge(roommateId, shareAmount, BigDecimal::add);
+                }
+            } else {
+                // User is not the payer, so user owes money to the payer
+                for (ExpenseParticipant participant : participants) {
+                    if (participant.getParticipant().getUser().getId().equals(userId)) {
+                        // This is the user's share
+                        BigDecimal shareAmount = participant.getShareAmount();
+                        // Positive shareAmount means user owes money to the expense payer
+                        balances.merge(expense.getUser().getId(), shareAmount.negate(), BigDecimal::add);
+                        break;
+                    }
+                }
             }
         }
 
