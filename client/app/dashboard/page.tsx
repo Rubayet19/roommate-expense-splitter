@@ -32,6 +32,10 @@ export default function Dashboard() {
 
   const router = useRouter();
 
+  const handleRoommatesChange = (updatedRoommates: Roommate[]) => {
+    setRoommates(updatedRoommates);
+  };
+
   const calculateBalanceSummary = useCallback(() => {
     const youOwe = Object.entries(balances)
       .filter(([roommateId, balance]) => balance > 0 && roommates.some(r => r.id === parseInt(roommateId)))
@@ -278,7 +282,7 @@ export default function Dashboard() {
             {activeTab === 'roommates' && (
               <>
                 <h1 className="text-2xl font-semibold text-gray-900 mb-6">My Roommates</h1>
-                <RoommatesList />
+                <RoommatesList onRoommatesChange={handleRoommatesChange} />
               </>
             )}
           </main>
@@ -289,6 +293,7 @@ export default function Dashboard() {
             onSubmit={handleAddExpense}
             currentUser={currentUser}
             roommates={roommates}
+            onRoommatesChange={handleRoommatesChange}
           />
         )}
         {showSettleUpForm && currentUser && (

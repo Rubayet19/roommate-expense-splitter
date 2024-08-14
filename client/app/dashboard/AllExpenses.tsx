@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUserExpenses } from '../services/expenseService';
+import { getUserExpenses, deleteExpense } from '../services/expenseService';
 import { getUserExpenseParticipants } from '../services/expenseParticipantService';
 import { getRoommates } from '../services/roommateService';
 import { ExpenseDTO, ExpenseParticipantDTO, Roommate } from '../dashboard/types/shared';
@@ -40,6 +40,16 @@ export default function AllExpenses() {
     }
   };
 
+  const handleDeleteExpense = async (expenseId: number) => {
+    try {
+      await deleteExpense(expenseId);
+      setExpenses(prevExpenses => prevExpenses.filter(expense => expense.id !== expenseId));
+      setExpenseParticipants(prevParticipants => prevParticipants.filter(participant => participant.expenseId !== expenseId));
+    } catch (err) {
+      console.error('Error deleting expense:', err);
+    }
+  };
+
   const getRoommateShareInfo = (expenseId: number) => {
     const participant = expenseParticipants.find(ep => ep.expenseId === expenseId);
     if (!participant) return null;
@@ -67,6 +77,7 @@ export default function AllExpenses() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Share Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Split Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -77,7 +88,7 @@ export default function AllExpenses() {
                   if (!shareInfo) return null; // Skip if no share info found
 
                   const { name, shareAmount } = shareInfo;
-                  const isRoommateOwed = shareAmount > 0;
+                  const roommateGetsPayment = shareAmount > 0;
                   const absShareAmount = Math.abs(shareAmount);
 
                   return (
@@ -85,15 +96,23 @@ export default function AllExpenses() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.description}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${totalAmount.toFixed(2)}</td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isRoommateOwed ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${roommateGetsPayment ? 'text-red-600' : 'text-green-600'}`}>
                         ${absShareAmount.toFixed(2)} 
                         <span className="text-gray-500">
-                          {isRoommateOwed 
-                            ? ` (${name} owes me)` 
-                            : ` (I owe ${name})`}
+                          {roommateGetsPayment 
+                            ? ` (I owe ${name})` 
+                            : ` (${name} owes me)`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.splitType}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button
+                          onClick={() => handleDeleteExpense(expense.id ?? -1)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}

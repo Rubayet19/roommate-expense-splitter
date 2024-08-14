@@ -7,9 +7,10 @@ interface AddExpenseFormProps {
   onSubmit: (expense: ExpenseDTO) => void;
   currentUser: User;
   roommates: Roommate[];
+  onRoommatesChange: (roommates: Roommate[]) => void;
 }
 
-export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommates }: AddExpenseFormProps) {
+export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommates, onRoommatesChange }: AddExpenseFormProps) {
   const [expense, setExpense] = useState<ExpenseDTO>({
     description: '',
     amount: '',
@@ -135,7 +136,8 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
     if (newRoommate.trim()) {
       try {
         const addedRoommate = await addRoommate(newRoommate.trim());
-        roommates.push(addedRoommate);
+        const updatedRoommates = [...roommates, addedRoommate];
+        onRoommatesChange(updatedRoommates);
         setNewRoommate('');
       } catch (error) {
         console.error('Error adding new roommate:', error);

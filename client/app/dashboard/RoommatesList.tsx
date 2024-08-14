@@ -1,7 +1,7 @@
 // components/RoommatesList.tsx
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getRoommates, addRoommate } from '../services/roommateService';
+import { getRoommates, addRoommate, deleteRoommate } from '../services/roommateService';
 import { getUserBalances } from '../services/expenseService';
 
 export interface Roommate {
@@ -9,7 +9,11 @@ export interface Roommate {
   name: string;
 }
 
-export default function RoommatesList() {
+interface RoommatesListProps {
+  onRoommatesChange: (roommates: Roommate[]) => void;
+}
+
+export default function RoommatesList({ onRoommatesChange }: RoommatesListProps) {
   const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [balances, setBalances] = useState<{ [key: number]: number }>({});
   const [selectedRoommate, setSelectedRoommate] = useState<Roommate | null>(null);
@@ -25,6 +29,7 @@ export default function RoommatesList() {
     try {
       const fetchedRoommates = await getRoommates();
       setRoommates(fetchedRoommates);
+      onRoommatesChange(fetchedRoommates);
     } catch (error) {
       console.error('Error fetching roommates:', error);
     }
@@ -43,12 +48,26 @@ export default function RoommatesList() {
     if (newRoommateName.trim()) {
       try {
         const newRoommate = await addRoommate(newRoommateName.trim());
-        setRoommates(prev => [...prev, newRoommate]);
+        const updatedRoommates = [...roommates, newRoommate];
+        setRoommates(updatedRoommates);
+        onRoommatesChange(updatedRoommates);
         setNewRoommateName('');
         setShowAddRoommateModal(false);
       } catch (error) {
         console.error('Error adding roommate:', error);
       }
+    }
+  };
+
+  const handleDeleteRoommate = async (id: number) => {
+    try {
+      await deleteRoommate(id);
+      const updatedRoommates = roommates.filter(roommate => roommate.id !== id);
+      setRoommates(updatedRoommates);
+      onRoommatesChange(updatedRoommates);
+      setSelectedRoommate(null);
+    } catch (error) {
+      console.error('Error deleting roommate:', error);
     }
   };
 
@@ -81,18 +100,26 @@ export default function RoommatesList() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {roommates.map((roommate) => (
               <tr
                 key={roommate.id}
-                className="cursor-pointer hover:bg-gray-50"
-                onClick={() => setSelectedRoommate(roommate)}
+                className="hover:bg-gray-50"
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{roommate.name}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)}`}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => setSelectedRoommate(roommate)}>{roommate.name}</td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)} cursor-pointer`} onClick={() => setSelectedRoommate(roommate)}>
                   {getBalanceDisplay(balances[roommate.id] || 0)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleDeleteRoommate(roommate.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
