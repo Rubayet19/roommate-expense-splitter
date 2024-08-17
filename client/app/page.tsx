@@ -1,5 +1,9 @@
-import React, { ReactNode } from 'react';
+'use client';
+
+import React, { ReactNode, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getCurrentUser } from './services/authService';
 
 interface FeatureProps {
   title: ReactNode;
@@ -23,20 +27,33 @@ function Footer() {
           <span>© 2024 Rubayet Bin Mujahid. Open Source under MIT License.</span>
         </div>
         <div className="text-right text-sm mt-8">
-          <a href="https://github.com/Rubayet19/roommate-expense-splitter" className="text-slate-800 text-md font-medium shadow-md p-2 mx-4 bg-slate-100  hover:bg-slate-200 rounded-lg" target="_blank" rel="noopener noreferrer">
-              View on GitHub
+          <a href="https://github.com/Rubayet19/roommate-expense-splitter" className="text-slate-800 text-md font-medium shadow-md p-2 mx-4 bg-slate-100 hover:bg-slate-200 rounded-lg" target="_blank" rel="noopener noreferrer">
+            View on GitHub
           </a>
         </div>
       </div>
     </footer>
   );
-};
+}
 
 const HomePage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        router.push('/dashboard');
+      }
+    };
+
+    checkLoginStatus();
+  }, [router]);
+
   return (
     <div className='flex flex-col min-h-screen'>
       <div className='flex-grow'>
-        <div >
+        <div>
           <div className='max-w-6xl mx-auto pt-7'>
             <h1 className='text-5xl font-extrabold text-center text-gray-800'>
               Roommate Expense Splitter
@@ -58,7 +75,6 @@ const HomePage = () => {
                   Login
                 </button>
               </Link>
-
             </div>
             <h2 className='text-3xl font-semibold text-gray-800 mt-16 mb-6 text-center'>
               Features
@@ -78,14 +94,14 @@ const HomePage = () => {
               />
               <Feature
                 title='Real-time updates'
-                description='See everyone’s contributions and balances update in real-time as transactions are made.'
+                description='See everyones contributions and balances update in real-time as transactions are made.'
               />
               <Feature
-                title='Secure payments'
+                title='Secure payments (coming soon)'
                 description='Use secure payment integration to transfer funds directly between roommates.'
               />
               <Feature
-                title='Customizable alerts'
+                title='Customizable alerts (coming soon)'
                 description='Set custom alerts for due payments to ensure timely contributions from all roommates.'
               />
             </div>
@@ -97,9 +113,4 @@ const HomePage = () => {
   );
 };
 
-
-
-
 export default HomePage;
-
-

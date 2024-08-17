@@ -1,32 +1,56 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { register } from '../services/authService';
 
-
-
 export default function SignupPage() {
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
   const router = useRouter();
+
+  const validateEmail = (email: string) => {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    // Password must be at least 8 characters long and contain at least one number, one lowercase and one uppercase letter
+    const re = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+    return re.test(password);
+  };
+
+  useEffect(() => {
+    setIsEmailValid(validateEmail(email));
+  }, [email]);
+
+  useEffect(() => {
+    setIsPasswordValid(validatePassword(password));
+  }, [password]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+
+    if (!isEmailValid) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!isPasswordValid) {
+      setError('Password must be at least 8 characters long and contain at least one number, one lowercase and one uppercase letter.');
+      return;
+    }
+
     try {
-      await register(username, password);
+      await register(email, password);
       router.push('/login');
     } catch (err) {
       setError('Signup failed. Please try again.');
       console.error('Signup error:', err);
     }
-  };
-
-  const handleGoogleSignIn = () => {
-    // Implement Google Sign-In logic here
-    console.log('Google Sign-In clicked');
   };
 
   const handleBackToHome = () => {
@@ -46,17 +70,6 @@ export default function SignupPage() {
           {error && <p className="text-red-500 mb-4">{error}</p>}
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="username" className="block mb-2">Username</label>
-              <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full px-3 py-2 border rounded"
-              />
-            </div>
-            {/* <div className="mb-4">
               <label htmlFor="email" className="block mb-2">Email</label>
               <input
                 type="email"
@@ -64,9 +77,10 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border rounded"
+                className={`w-full px-3 py-2 border rounded ${isEmailValid ? 'border-green-500' : 'border-red-500'}`}
               />
-            </div> */}
+              {!isEmailValid && email && <p className="text-red-500 text-sm mt-1">Please enter a valid email address.</p>}
+            </div>
             <div className="mb-4">
               <label htmlFor="password" className="block mb-2">Password</label>
               <input
@@ -75,30 +89,22 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border rounded"
+                className={`w-full px-3 py-2 border rounded ${isPasswordValid ? 'border-green-500' : 'border-red-500'}`}
               />
+              {!isPasswordValid && password && (
+                <p className="text-red-500 text-sm mt-1">
+                  Password must be at least 8 characters long and contain at least one number, one lowercase and one uppercase letter.
+                </p>
+              )}
             </div>
-            <button type="submit" className="w-full mt-5 bg-black hover:bg-slate-700 text-white font-bold py-2 px-4 rounded">
+            <button 
+              type="submit" 
+              className={`w-full mt-5 bg-black hover:bg-slate-700 text-white font-bold py-2 px-4 rounded ${(!isEmailValid || !isPasswordValid) && 'opacity-50 cursor-not-allowed'}`}
+              disabled={!isEmailValid || !isPasswordValid}
+            >
               Sign Up
             </button>
           </form>
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or</span>
-            </div>
-          </div>
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-50 mt-4 flex items-center justify-center"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              {/* Google SVG path data */}
-            </svg>
-            Sign in with Google
-          </button>
         </div>
       </div>
     </div>

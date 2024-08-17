@@ -148,15 +148,21 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-
+  
+    // Check if at least one roommate is selected
+    if (expense.splitWith.length === 0) {
+      setError("Please select at least one roommate to split the expense with.");
+      return;
+    }
+  
     const totalAmount = parseFloat(expense.amount);
     const totalShares = Object.values(expense.splitDetails).reduce((sum, share) => sum + parseFloat(share), 0);
-
+  
     if (Math.abs(totalShares - totalAmount) > 0.01) {
       setError(`The sum of individual shares (${totalShares.toFixed(2)}) does not match the total amount (${totalAmount.toFixed(2)})`);
       return;
     }
-
+  
     if (paidByMultiple && expense.splitType === 'EQUAL') {
       const totalPaidBy = Object.values(paidByAmounts).reduce((sum, amount) => sum + parseFloat(amount || '0'), 0);
       if (Math.abs(totalPaidBy - totalAmount) > 0.01) {
@@ -164,14 +170,14 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
         return;
       }
     }
-
+  
     const submittableExpense: ExpenseDTO = {
       ...expense,
       paidBy: paidByMultiple && expense.splitType === 'EQUAL' ? Object.keys(paidByAmounts).map(Number) : expense.paidBy,
       splitWith: expense.splitWith.map(Number),
       splitDetails: paidByMultiple && expense.splitType === 'EQUAL' ? paidByAmounts : expense.splitDetails
     };
-
+  
     console.log('Submitting expense:', submittableExpense);
     onSubmit(submittableExpense);
     onClose();
@@ -258,6 +264,9 @@ export default function AddExpenseForm({ onClose, onSubmit, currentUser, roommat
                 </button>
               )}
             </div>
+            {expense.splitWith.length === 0 && (
+              <p className="text-red-500 text-sm mt-2">Please select at least one roommate.</p>
+            )}
           </div>
           <div className="mb-4">
             <input

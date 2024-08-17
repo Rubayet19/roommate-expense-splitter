@@ -123,6 +123,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleExpenseDeleted = async () => {
+    await fetchExpenses();
+    await fetchBalances();
+  };
+
   return (
     <ProtectedRoute>
       <div className="flex flex-col min-h-screen -m-5">
@@ -276,7 +281,7 @@ export default function Dashboard() {
             {activeTab === 'allExpenses' && (
               <>
                 <h1 className="text-2xl font-semibold text-gray-900 mb-6">All Expenses</h1>
-                <AllExpenses />
+                <AllExpenses onExpenseDeleted={handleExpenseDeleted} />
               </>
             )}
             {activeTab === 'roommates' && (

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logout } from './authService';
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -22,8 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Token has expired or is invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      logout();
       // Redirect to login page
       window.location.href = '/login';
     }

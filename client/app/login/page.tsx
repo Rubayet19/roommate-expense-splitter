@@ -71,7 +71,7 @@ export default function LoginPage() {
           {error && <p className="text-red-500 mb-4">{error}</p>}
           <form onSubmit={handleSubmit}>
             <div className="mb-2">
-              <label htmlFor="username" className="block mb-2">Username</label>
+              <label htmlFor="username" className="block mb-2">Email</label>
               <input
                 type="text"
                 id="username"
@@ -96,7 +96,7 @@ export default function LoginPage() {
               Log In
             </button>
           </form>
-          <div className="relative py-2">
+          {/* <div className="relative py-2">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
             </div>
@@ -109,7 +109,7 @@ export default function LoginPage() {
             onError={() => {
               setError('Google Sign-In failed. Please try again.');
             }}
-          />
+          /> */}
         </div>
       </div>
     </div>

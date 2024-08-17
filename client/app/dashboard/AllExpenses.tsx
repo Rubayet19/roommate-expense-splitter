@@ -16,7 +16,11 @@ const groupExpensesByMonthYear = (expenses: ExpenseDTO[]) => {
   }, {} as Record<string, ExpenseDTO[]>);
 };
 
-export default function AllExpenses() {
+interface AllExpensesProps {
+  onExpenseDeleted: () => void;
+}
+
+export default function AllExpenses({ onExpenseDeleted }: AllExpensesProps) {
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [expenseParticipants, setExpenseParticipants] = useState<ExpenseParticipantDTO[]>([]);
   const [roommates, setRoommates] = useState<Roommate[]>([]);
@@ -45,24 +49,24 @@ export default function AllExpenses() {
       await deleteExpense(expenseId);
       setExpenses(prevExpenses => prevExpenses.filter(expense => expense.id !== expenseId));
       setExpenseParticipants(prevParticipants => prevParticipants.filter(participant => participant.expenseId !== expenseId));
+      onExpenseDeleted(); // Call the callback to update the dashboard
     } catch (err) {
       console.error('Error deleting expense:', err);
     }
   };
 
   const getRoommateShareInfo = (expenseId: number) => {
-    const participant = expenseParticipants.find(ep => ep.expenseId === expenseId);
-    if (!participant) return null;
-
-    const roommate = roommates.find(r => r.id === participant.participantId);
-    return {
-      name: roommate ? roommate.name : 'Unknown Roommate',
-      shareAmount: participant.shareAmount
-    };
+    const participants = expenseParticipants.filter(ep => ep.expenseId === expenseId);
+    return participants.map(participant => {
+      const roommate = roommates.find(r => r.id === participant.participantId);
+      return {
+        name: roommate ? roommate.name : 'Unknown Roommate',
+        shareAmount: participant.shareAmount
+      };
+    });
   };
 
   const groupedExpenses = groupExpensesByMonthYear(expenses);
-
   return (
     <div>
       {Object.entries(groupedExpenses).map(([monthYear, monthExpenses]) => (
@@ -75,7 +79,7 @@ export default function AllExpenses() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Share Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Share Details</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Split Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -83,26 +87,30 @@ export default function AllExpenses() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {monthExpenses.map((expense) => {
                   const totalAmount = parseFloat(expense.amount);
-                  const shareInfo = getRoommateShareInfo(expense.id ?? -1);
+                  const shareInfos = getRoommateShareInfo(expense.id ?? -1);
                   
-                  if (!shareInfo) return null; // Skip if no share info found
-
-                  const { name, shareAmount } = shareInfo;
-                  const roommateGetsPayment = shareAmount > 0;
-                  const absShareAmount = Math.abs(shareAmount);
-
                   return (
                     <tr key={expense.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.description}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${totalAmount.toFixed(2)}</td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${roommateGetsPayment ? 'text-red-600' : 'text-green-600'}`}>
-                        ${absShareAmount.toFixed(2)} 
-                        <span className="text-gray-500">
-                          {roommateGetsPayment 
-                            ? ` (I owe ${name})` 
-                            : ` (${name} owes me)`}
-                        </span>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {shareInfos.map((shareInfo, index) => {
+                          const { name, shareAmount } = shareInfo;
+                          const roommateGetsPayment = shareAmount > 0;
+                          const absShareAmount = Math.abs(shareAmount);
+                          
+                          return (
+                            <div key={index} className={`${roommateGetsPayment ? 'text-red-600' : 'text-green-600'}`}>
+                              ${absShareAmount.toFixed(2)} 
+                              <span className="text-gray-500">
+                                {roommateGetsPayment 
+                                  ? ` (I owe ${name})` 
+                                  : ` (${name} owes me)`}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.splitType}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
