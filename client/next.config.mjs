@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ['@react-oauth/google'],  // Add this line
+  transpilePackages: ['@react-oauth/google'],  
   webpack: (config, { dev, isServer }) => {
     if (!isServer && dev) {
       config.devtool = 'source-map';
