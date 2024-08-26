@@ -59,14 +59,14 @@ SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/roommate-expense-splitter
 SPRING_DATASOURCE_USERNAME=your_username
 SPRING_DATASOURCE_PASSWORD=your_password
 
-# JWT Configuration
+## JWT Configuration
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRATION=86400000
 
-# Server Configuration
+## Server Configuration
 SERVER_PORT=8080
 
-# Other Configuration
+## Other Configuration
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 SPRING_JPA_SHOW_SQL=true
 How to obtain these values:
