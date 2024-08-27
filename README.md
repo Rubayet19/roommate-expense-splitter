@@ -104,7 +104,7 @@ Remember to keep your application.properties file secure and never commit it to 
 
 ## Frontend Configuration
 Create a .env.local file in the client directory with the following content:
-CopyNEXT_PUBLIC_API_URL=http://localhost:8080/api
+Copy NEXT_PUBLIC_API_URL=http://localhost:8080/api
 This environment variable will be used in the api.ts and authService.ts files to set the base URL for API requests.
 
 
