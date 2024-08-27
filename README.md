@@ -102,12 +102,6 @@ SPRING_JPA_SHOW_SQL: Set to "true" to see SQL queries in the console, which is u
 
 Remember to keep your application.properties file secure and never commit it to version control if it contains sensitive information. Instead, you can provide an application.properties.example file in your repository with placeholder values.
 
-## Running with Docker
-
-If you prefer using Docker:
-
-1. Ensure Docker and Docker Compose are installed
-2. Run `docker-compose up` in the project root directory
 
 ## Contributing
 
