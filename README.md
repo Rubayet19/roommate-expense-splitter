@@ -102,7 +102,7 @@ SPRING_JPA_SHOW_SQL: Set to "true" to see SQL queries in the console, which is u
 
 Remember to keep your application.properties file secure and never commit it to version control if it contains sensitive information. Instead, you can provide an application.properties.example file in your repository with placeholder values.
 
-##Frontend Configuration
+## Frontend Configuration
 Create a .env.local file in the client directory with the following content:
 CopyNEXT_PUBLIC_API_URL=http://localhost:8080/api
 This environment variable will be used in the api.ts and authService.ts files to set the base URL for API requests.
