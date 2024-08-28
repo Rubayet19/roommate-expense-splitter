@@ -1,6 +1,6 @@
 # Roommate Expense Splitter
 
-A web application to help roommates track and split shared expenses.
+A web application to help roommates track and split shared expenses. The site is accessible from here: https://roommate-expense-splitter.netlify.app
 
 ## Features
 
@@ -23,7 +23,7 @@ A web application to help roommates track and split shared expenses.
 - PostgreSQL 12 or higher
 - Docker (optional)
 
-## Setup and Installation
+## Setup and Installation for Running It on a Local Machine
 
 1. Clone the repository:
    ```
