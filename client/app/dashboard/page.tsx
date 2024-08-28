@@ -130,7 +130,7 @@ export default function Dashboard() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen pt-8 pr-8">
+      <div className="flex flex-col min-h-screen pt-3 pr-3">
         <nav className="bg-white">
           <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-14">
