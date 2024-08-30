@@ -54,7 +54,7 @@ const HomePage = () => {
     <div className='flex flex-col min-h-screen'>
       <div className='flex-grow'>
         <div>
-          <div className='max-w-6xl mx-auto pt-12'>
+          <div className='max-w-6xl mx-auto pt-24'>
             <h1 className='text-5xl font-extrabold text-center text-gray-800'>
               Roommate Expense Splitter
             </h1>
