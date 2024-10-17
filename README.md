@@ -1,6 +1,6 @@
 # Roommate Expense Splitter
 
-A web application to help roommates track and split shared expenses. The site is accessible from here: https://roommate-expense-splitter.netlify.app
+A web application to help roommates track and split shared expenses. The site is accessible from here: https://roommateexpensesplitter.com
 
 ## Features
 
