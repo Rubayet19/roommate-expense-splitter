@@ -1,6 +1,6 @@
 # Roommate Expense Splitter
 
-A web application to help roommates track and split shared expenses. The site is accessible from here: https://roommateexpensesplitter.com
+A web application to help roommates track and split shared expenses. The site can be accessed from here: https://roommateexpensesplitter.com
 
 ## Features
 
