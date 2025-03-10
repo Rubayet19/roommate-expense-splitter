@@ -1,8 +1,8 @@
-// components/RoommatesList.tsx
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getRoommates, addRoommate, deleteRoommate } from '../services/roommateService';
 import { getUserBalances } from '../services/expenseService';
+import { motion } from 'framer-motion';
 
 export interface Roommate {
   id: number;
@@ -85,16 +85,18 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Roommates</h2>
-        <button 
-          className="bg-black hover:bg-slate-700 text-white text-sm font-semibold py-2 px-4 rounded"
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">Your Roommates</h2>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors shadow-sm"
           onClick={() => setShowAddRoommateModal(true)}
         >
           Add Roommate
-        </button>
+        </motion.button>
       </div>
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-100">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -107,7 +109,7 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
             {roommates.map((roommate) => (
               <tr
                 key={roommate.id}
-                className="hover:bg-gray-50"
+                className="hover:bg-gray-50 transition-colors"
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => setSelectedRoommate(roommate)}>{roommate.name}</td>
                 <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)} cursor-pointer`} onClick={() => setSelectedRoommate(roommate)}>
@@ -116,58 +118,84 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
                     onClick={() => handleDeleteRoommate(roommate.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-500 hover:text-red-700 transition-colors"
                   >
                     Delete
                   </button>
                 </td>
               </tr>
             ))}
+            {roommates.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-6 py-4 text-center text-sm text-gray-500 italic">
+                  No roommates added yet. Add your first roommate to get started!
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
       {selectedRoommate && (
-        <div className="mt-6 bg-white shadow-md rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Roommate Details</h3>
-          <p><strong>Name:</strong> {selectedRoommate.name}</p>
-          <p><strong>Balance:</strong>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 bg-white shadow-sm rounded-xl p-6 border border-gray-100"
+        >
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Roommate Details</h3>
+          <p className="mb-2"><span className="font-medium text-gray-700">Name:</span> {selectedRoommate.name}</p>
+          <p className="mb-4"><span className="font-medium text-gray-700">Balance:</span>{' '}
             <span className={`font-medium ${getBalanceColor(balances[selectedRoommate.id] || 0)}`}>
               {getBalanceDisplay(balances[selectedRoommate.id] || 0)}
             </span>
           </p>
-          <div className="mt-4">
-            <Link href={`/roommates/${selectedRoommate.id}`} className="text-blue-600 hover:underline">
+          <div className="mt-4 flex justify-between">
+            <Link href={`/roommates/${selectedRoommate.id}`} className="text-indigo-600 hover:text-indigo-800 transition-colors font-medium">
               View Full Details
             </Link>
+            <button 
+              onClick={() => setSelectedRoommate(null)}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Close
+            </button>
           </div>
-        </div>
+        </motion.div>
       )}
       {showAddRoommateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
-          <div className="bg-white p-5 rounded-lg shadow-xl w-96">
-            <h3 className="text-lg font-semibold mb-4">Add New Roommate</h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-6 rounded-xl shadow-lg w-96 border border-gray-100"
+          >
+            <h3 className="text-xl font-semibold mb-4 text-gray-800">Add New Roommate</h3>
             <input
               type="text"
               value={newRoommateName}
               onChange={(e) => setNewRoommateName(e.target.value)}
               placeholder="Enter roommate name"
-              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+              className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             />
-            <div className="flex justify-end">
-              <button
+            <div className="flex justify-end space-x-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowAddRoommateModal(false)}
-                className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleAddRoommate}
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800"
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                disabled={!newRoommateName.trim()}
               >
                 Add
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
