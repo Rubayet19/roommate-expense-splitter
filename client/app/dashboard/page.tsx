@@ -14,6 +14,7 @@ import { getRoommates } from '../services/roommateService';
 import { addExpense, getUserExpenses, getUserBalances } from '../services/expenseService';
 import { getCurrentUser } from '../services/userService';
 import { createSettlement } from '../services/settlementService';
+import { motion } from 'framer-motion';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'allExpenses' | 'roommates'>('dashboard');
@@ -130,93 +131,103 @@ export default function Dashboard() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen pt-3 pr-5">
-        <nav className="bg-white">
-          <div className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-14">
-              <div className="flex">
-                <Link href="/dashboard" className="flex-shrink-0 flex items-center text-base text-black font-semibold" onClick={() => setActiveTab('dashboard')}>
-                  Home
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <nav className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center">
+                <Link href="/dashboard" className="flex-shrink-0 flex items-center text-xl text-indigo-600 font-bold">
+                  Roommate Expense Splitter
                 </Link>
               </div>
               <div className="flex items-center relative">
                 <span 
-                  className="text-black mr-4 font-semibold cursor-pointer"
+                  className="text-gray-700 mr-4 font-medium cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
-                  User
+                  {currentUser?.username || 'User'}
                 </span>
                 {showUserDropdown && (
-                  <div className="absolute right-0 w-48 bg-white rounded-md shadow-lg py-1 z-10 top-full">
-                    <Link href="/user-profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
+                  <div className="absolute right-0 w-48 bg-white rounded-lg shadow-lg py-1 z-10 top-full mt-1 border border-gray-100">
+                    <Link href="/user-profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors w-full text-left">
                       Your Account
                     </Link>
                   </div>
                 )}
-                <button
-                  className="bg-black hover:bg-slate-700 text-white text-sm font-semibold py-2 px-3 rounded"
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
                   onClick={handleLogout}
                 >
                   Logout
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
         </nav>
-        <hr className="border-gray-200" />
-        <div className="flex flex-1">
-          <div className="w-60 bg-white shadow-xl rounded-md">
-            <ul className="py-4">
+        
+        <div className="flex flex-1 pt-6">
+          <div className="w-64 bg-white shadow-sm rounded-lg mx-4 h-fit">
+            <ul className="py-2">
               <li   
-                className={`mx-2 rounded cursor-pointer ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
+                className={`mx-2 rounded-lg cursor-pointer transition-colors ${activeTab === 'dashboard' ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-700 hover:text-indigo-600'}`}
                 onClick={() => setActiveTab('dashboard')}
               >
-                <span className="block px-4 py-2">Dashboard</span>
+                <span className="block px-4 py-3 font-medium">Dashboard</span>
               </li>
               <li 
-                className={`mx-2 rounded cursor-pointer ${activeTab === 'allExpenses' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
+                className={`mx-2 rounded-lg cursor-pointer transition-colors ${activeTab === 'allExpenses' ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-700 hover:text-indigo-600'}`}
                 onClick={() => setActiveTab('allExpenses')}
               >
-                <span className="block px-4 py-2">All Expenses</span>
+                <span className="block px-4 py-3 font-medium">All Expenses</span>
               </li>
               <li 
-                className={`mx-2 rounded cursor-pointer ${activeTab === 'roommates' ? 'bg-slate-100 text-slate-600' : 'hover:bg-slate-50'}`}
+                className={`mx-2 rounded-lg cursor-pointer transition-colors ${activeTab === 'roommates' ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-700 hover:text-indigo-600'}`}
                 onClick={() => setActiveTab('roommates')}
               >
-                <span className="block px-4 py-2">Roommates</span>
+                <span className="block px-4 py-3 font-medium">Roommates</span>
               </li>
             </ul>
           </div>
           
-          <main className="flex-1 flex-col bg-slate-100 p-6 overflow-y-auto pr-28 pl-12">
+          <main className="flex-1 px-4 pb-8 pr-6">
             {activeTab === 'dashboard' && (
-              <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
                 <div className="flex justify-between items-center mb-6">
-                  <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-                  <div>
-                    <button 
-                      className="bg-black hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded mr-2"
+                  <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                  <div className="space-x-3">
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors shadow-sm"
                       onClick={() => setShowAddExpenseForm(true)}
                     >
                       Add an Expense
-                    </button>
-                    <button 
-                      className="bg-green-500 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded"
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors shadow-sm"
                       onClick={() => setShowSettleUpForm(true)}
                     >
                       Settle Up
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
                 
-                <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-3 gap-4">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 grid grid-cols-3 gap-6">
                   <div>
-                    <h2 className="text-lg font-semibold mb-2">Total Balance</h2>
-                    <p className={`text-xl font-bold ${balanceSummary.totalBalance !== 0 ? (balanceSummary.totalBalance > 0 ? 'text-green-500' : 'text-red-500') : 'text-gray-500'}`}>
+                    <h2 className="text-lg font-semibold mb-2 text-gray-700">Total Balance</h2>
+                    <p className={`text-2xl font-bold ${balanceSummary.totalBalance !== 0 ? (balanceSummary.totalBalance > 0 ? 'text-green-500' : 'text-red-500') : 'text-gray-500'}`}>
                       {balanceSummary.totalBalance === 0 ? '$0' : (
                         <>
                           {balanceSummary.totalBalance > 0 ? '+' : '-'}${Math.abs(balanceSummary.totalBalance).toFixed(2)}
-                          <span className="text-sm font-normal ml-1">
+                          <span className="text-sm font-normal ml-1 text-gray-500">
                             {balanceSummary.totalBalance > 0 ? 'You are Owed' : 'You Owe'}
                           </span>
                         </>
@@ -224,89 +235,116 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold mb-2">You Owe</h2>
-                    <p className="text-xl font-bold text-red-500">
+                    <h2 className="text-lg font-semibold mb-2 text-gray-700">You Owe</h2>
+                    <p className="text-2xl font-bold text-red-500">
                       ${balanceSummary.youOwe.toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold mb-2">You are Owed</h2>
-                    <p className="text-xl font-bold text-green-500">
+                    <h2 className="text-lg font-semibold mb-2 text-gray-700">You are Owed</h2>
+                    <p className="text-2xl font-bold text-green-500">
                       ${balanceSummary.youAreOwed.toFixed(2)}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-slate-100 p-4 rounded-lg ">
-                    <h2 className="text-xl font-semibold mb-4">YOU OWE</h2>
-                    <ul className='pt-4'>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">YOU OWE</h2>
+                    <ul className='pt-2 space-y-3'>
                       {Object.entries(balances)
                         .filter(([roommateId, balance]) => balance > 0 && roommates.some(r => r.id === parseInt(roommateId)))
                         .map(([roommateId, balance]) => {
                           const roommate = roommates.find(r => r.id === parseInt(roommateId));
                           if (!roommate) return null;
                           return (
-                            <li key={roommateId} className="flex items-center mb-5">
-                              <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
-                              <span className="flex-grow">{roommate.name}</span>
-                              <span className="font-semibold text-red-500">you owe ${balance.toFixed(2)}</span>
+                            <li key={roommateId} className="flex items-center justify-between py-2 border-b border-gray-100">
+                              <span className="font-medium text-gray-800">{roommate.name}</span>
+                              <span className="font-bold text-red-500">${balance.toFixed(2)}</span>
                             </li>
                           );
                         })}
+                      {Object.entries(balances).filter(([roommateId, balance]) => balance > 0 && roommates.some(r => r.id === parseInt(roommateId))).length === 0 && (
+                        <li className="py-2 text-gray-500 italic">You don&apos;t owe anyone</li>
+                      )}
                     </ul>
                   </div>
-                  <div className="bg-slate-100 p-4 rounded-lg ">
-                    <h2 className="text-xl font-semibold mb-4">YOU ARE OWED</h2>
-                    <ul className='pt-4'>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">YOU ARE OWED</h2>
+                    <ul className='pt-2 space-y-3'>
                       {Object.entries(balances)
                         .filter(([roommateId, balance]) => balance < 0 && roommates.some(r => r.id === parseInt(roommateId)))
                         .map(([roommateId, balance]) => {
                           const roommate = roommates.find(r => r.id === parseInt(roommateId));
                           if (!roommate) return null;
                           return (
-                            <li key={roommateId} className="flex items-center mb-2">
-                              <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
-                              <span className="flex-grow">{roommate.name}</span>
-                              <span className="font-semibold text-green-500">owes you ${Math.abs(balance).toFixed(2)}</span>
+                            <li key={roommateId} className="flex items-center justify-between py-2 border-b border-gray-100">
+                              <span className="font-medium text-gray-800">{roommate.name}</span>
+                              <span className="font-bold text-green-500">${Math.abs(balance).toFixed(2)}</span>
                             </li>
                           );
                         })}
+                      {Object.entries(balances).filter(([roommateId, balance]) => balance < 0 && roommates.some(r => r.id === parseInt(roommateId))).length === 0 && (
+                        <li className="py-2 text-gray-500 italic">No one owes you</li>
+                      )}
                     </ul>
                   </div>
                 </div>
-              </>
+              </motion.div>
             )}
-
+            
             {activeTab === 'allExpenses' && (
-              <>
-                <h1 className="text-2xl font-semibold text-gray-900 mb-6">All Expenses</h1>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-2xl font-bold text-gray-900">All Expenses</h1>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors shadow-sm"
+                    onClick={() => setShowAddExpenseForm(true)}
+                  >
+                    Add an Expense
+                  </motion.button>
+                </div>
                 <AllExpenses onExpenseDeleted={handleExpenseDeleted} />
-              </>
+              </motion.div>
             )}
+            
             {activeTab === 'roommates' && (
-              <>
-                <h1 className="text-2xl font-semibold text-gray-900 mb-6">My Roommates</h1>
-                <RoommatesList onRoommatesChange={handleRoommatesChange} />
-              </>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-6">Roommates</h1>
+                  <RoommatesList onRoommatesChange={handleRoommatesChange} />
+                </div>
+              </motion.div>
             )}
           </main>
         </div>
+        
         {showAddExpenseForm && currentUser && (
           <AddExpenseForm 
-            onClose={() => setShowAddExpenseForm(false)}
+            onClose={() => setShowAddExpenseForm(false)} 
             onSubmit={handleAddExpense}
             currentUser={currentUser}
             roommates={roommates}
             onRoommatesChange={handleRoommatesChange}
           />
         )}
-        {showSettleUpForm && currentUser && (
-          <SettleUpForm
-            onClose={() => setShowSettleUpForm(false)}
+        
+        {showSettleUpForm && (
+          <SettleUpForm 
+            onClose={() => setShowSettleUpForm(false)} 
             onSettleUp={handleSettleUp}
-            currentUser={currentUser}
             roommates={roommates}
+            currentUser={currentUser!}
           />
         )}
       </div>
