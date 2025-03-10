@@ -3,6 +3,7 @@ import { getUserExpenses, deleteExpense } from '../services/expenseService';
 import { getUserExpenseParticipants } from '../services/expenseParticipantService';
 import { getRoommates } from '../services/roommateService';
 import { ExpenseDTO, ExpenseParticipantDTO, Roommate } from '../dashboard/types/shared';
+import { motion } from 'framer-motion';
 
 const groupExpensesByMonthYear = (expenses: ExpenseDTO[]) => {
   return expenses.reduce((acc, expense) => {
@@ -66,13 +67,39 @@ export default function AllExpenses({ onExpenseDeleted }: AllExpensesProps) {
     });
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
   const groupedExpenses = groupExpensesByMonthYear(expenses);
   return (
     <div>
+      {Object.entries(groupedExpenses).length === 0 && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center"
+        >
+          <p className="text-gray-500 mb-4">No expenses recorded yet.</p>
+          <p className="text-gray-600">Add your first expense to start tracking your shared costs!</p>
+        </motion.div>
+      )}
+      
       {Object.entries(groupedExpenses).map(([monthYear, monthExpenses]) => (
-        <div key={monthYear} className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">{monthYear}</h2>
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <motion.div 
+          key={monthYear} 
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">{monthYear}</h2>
+          <div className="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-100">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -90,33 +117,37 @@ export default function AllExpenses({ onExpenseDeleted }: AllExpensesProps) {
                   const shareInfos = getRoommateShareInfo(expense.id ?? -1);
                   
                   return (
-                    <tr key={expense.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
+                    <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(expense.date)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.description}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${totalAmount.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${totalAmount.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-sm">
                         {shareInfos.map((shareInfo, index) => {
                           const { name, shareAmount } = shareInfo;
                           const roommateGetsPayment = shareAmount > 0;
                           const absShareAmount = Math.abs(shareAmount);
                           
                           return (
-                            <div key={index} className={`${roommateGetsPayment ? 'text-red-600' : 'text-green-600'}`}>
+                            <div key={index} className={`${roommateGetsPayment ? 'text-red-500' : 'text-green-500'} mb-1`}>
                               ${absShareAmount.toFixed(2)} 
-                              <span className="text-gray-500">
+                              <span className="text-gray-500 ml-1">
                                 {roommateGetsPayment 
-                                  ? ` (I owe ${name})` 
-                                  : ` (${name} owes me)`}
+                                  ? `(I owe ${name})` 
+                                  : `(${name} owes me)`}
                               </span>
                             </div>
                           );
                         })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.splitType}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">
+                          {expense.splitType}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
                           onClick={() => handleDeleteExpense(expense.id ?? -1)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-500 hover:text-red-700 transition-colors font-medium"
                         >
                           Delete
                         </button>
@@ -127,7 +158,7 @@ export default function AllExpenses({ onExpenseDeleted }: AllExpensesProps) {
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
       ))}
     </div>
   );
