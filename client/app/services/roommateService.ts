@@ -10,6 +10,12 @@ export const addRoommate = async (name: string): Promise<Roommate> => {
   const response = await api.post<Roommate>('/roommates', { name });
   return response.data;
 };
+
+export const updateRoommate = async (id: number, name: string): Promise<Roommate> => {
+  const response = await api.put<Roommate>(`/roommates/${id}`, { name });
+  return response.data;
+};
+
 export const deleteRoommate = async (id: number): Promise<void> => {
   await api.delete(`/roommates/${id}`);
 };
