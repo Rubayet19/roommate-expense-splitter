@@ -307,7 +307,7 @@ export default function Dashboard() {
                     Add an Expense
                   </motion.button>
                 </div>
-                <AllExpenses onExpenseDeleted={handleExpenseDeleted} />
+                <AllExpenses onExpenseDeleted={handleExpenseDeleted} roommates={roommates} />
               </motion.div>
             )}
             
