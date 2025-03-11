@@ -35,6 +35,7 @@ export default function Dashboard() {
 
   const handleRoommatesChange = (updatedRoommates: Roommate[]) => {
     setRoommates(updatedRoommates);
+    fetchExpenses();
   };
 
   const calculateBalanceSummary = useCallback(() => {
@@ -227,9 +228,6 @@ export default function Dashboard() {
                       {balanceSummary.totalBalance === 0 ? '$0' : (
                         <>
                           {balanceSummary.totalBalance > 0 ? '+' : '-'}${Math.abs(balanceSummary.totalBalance).toFixed(2)}
-                          <span className="text-sm font-normal ml-1 text-gray-500">
-                            {balanceSummary.totalBalance > 0 ? 'You are Owed' : 'You Owe'}
-                          </span>
                         </>
                       )}
                     </p>
@@ -310,7 +308,7 @@ export default function Dashboard() {
                     Add an Expense
                   </motion.button>
                 </div>
-                <AllExpenses onExpenseDeleted={handleExpenseDeleted} />
+                <AllExpenses onExpenseDeleted={handleExpenseDeleted} roommates={roommates} />
               </motion.div>
             )}
             
