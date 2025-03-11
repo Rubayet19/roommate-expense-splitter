@@ -167,7 +167,7 @@ const HomePage = () => {
             <div className="relative">
               {/* Dashboard screenshot */}
               <img 
-                src="/public/image.png" 
+                src="/image.png" 
                 alt="Roommate Expense Splitter Dashboard" 
                 className="w-full h-auto"
               />
