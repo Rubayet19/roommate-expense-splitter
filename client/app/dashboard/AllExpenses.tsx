@@ -23,27 +23,38 @@ const groupExpensesByMonthYear = (expenses: ExpenseDTO[]) => {
 
 interface AllExpensesProps {
   onExpenseDeleted: () => void;
-  roommates: Roommate[];
+  roommates?: Roommate[];
 }
 
-export default function AllExpenses({ onExpenseDeleted, roommates }: AllExpensesProps) {
+export default function AllExpenses({ onExpenseDeleted, roommates: propRoommates }: AllExpensesProps) {
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [expenseParticipants, setExpenseParticipants] = useState<ExpenseParticipantDTO[]>([]);
+  const [roommates, setRoommates] = useState<Roommate[]>(propRoommates || []);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, [roommates]);
+  }, []);
+
+  useEffect(() => {
+    if (propRoommates) {
+      setRoommates(propRoommates);
+    }
+  }, [propRoommates]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [fetchedExpenses, fetchedParticipants] = await Promise.all([
+      const [fetchedExpenses, fetchedParticipants, fetchedRoommates] = await Promise.all([
         getUserExpenses(),
-        getUserExpenseParticipants()
+        getUserExpenseParticipants(),
+        propRoommates ? Promise.resolve(propRoommates) : getRoommates()
       ]);
       setExpenses(fetchedExpenses);
       setExpenseParticipants(fetchedParticipants);
+      if (!propRoommates) {
+        setRoommates(fetchedRoommates);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -56,7 +67,7 @@ export default function AllExpenses({ onExpenseDeleted, roommates }: AllExpenses
       await deleteExpense(expenseId);
       setExpenses(prevExpenses => prevExpenses.filter(expense => expense.id !== expenseId));
       setExpenseParticipants(prevParticipants => prevParticipants.filter(participant => participant.expenseId !== expenseId));
-      onExpenseDeleted(); // Call the callback to update the dashboard
+      onExpenseDeleted();
     } catch (err) {
       console.error('Error deleting expense:', err);
     }
