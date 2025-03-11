@@ -1,7 +1,7 @@
 // components/RoommatesList.tsx
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getRoommates, addRoommate, deleteRoommate, updateRoommate } from '../services/roommateService';
+import { getRoommates, addRoommate, deleteRoommate } from '../services/roommateService';
 import { getUserBalances } from '../services/expenseService';
 import { motion } from 'framer-motion';
 
@@ -20,8 +20,6 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
   const [selectedRoommate, setSelectedRoommate] = useState<Roommate | null>(null);
   const [newRoommateName, setNewRoommateName] = useState('');
   const [showAddRoommateModal, setShowAddRoommateModal] = useState(false);
-  const [editRoommateName, setEditRoommateName] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchRoommates();
@@ -74,26 +72,6 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
     }
   };
 
-  const handleEditRoommate = () => {
-    if (selectedRoommate && editRoommateName.trim()) {
-      setIsEditing(true);
-      updateRoommate(selectedRoommate.id, editRoommateName.trim())
-        .then(updatedRoommate => {
-          const updatedRoommates = roommates.map(r => 
-            r.id === updatedRoommate.id ? updatedRoommate : r
-          );
-          setRoommates(updatedRoommates);
-          onRoommatesChange(updatedRoommates);
-          setSelectedRoommate(updatedRoommate);
-          setIsEditing(false);
-        })
-        .catch(error => {
-          console.error('Error updating roommate:', error);
-          setIsEditing(false);
-        });
-    }
-  };
-
   const getBalanceDisplay = (balance: number) => {
     if (balance === 0) return 'Settled';
     if (balance > 0) return `Owes you $${balance.toFixed(2)}`;
@@ -104,15 +82,6 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
     if (balance === 0) return 'text-gray-500';
     if (balance > 0) return 'text-green-600';
     return 'text-red-600';
-  };
-
-  const setSelectedRoommateWithEdit = (roommate: Roommate | null) => {
-    setSelectedRoommate(roommate);
-    if (roommate) {
-      setEditRoommateName(roommate.name);
-    } else {
-      setEditRoommateName('');
-    }
   };
 
   return (
@@ -143,8 +112,8 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
                 key={roommate.id}
                 className="hover:bg-gray-50 transition-colors"
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => setSelectedRoommateWithEdit(roommate)}>{roommate.name}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)} cursor-pointer`} onClick={() => setSelectedRoommateWithEdit(roommate)}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => setSelectedRoommate(roommate)}>{roommate.name}</td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getBalanceColor(balances[roommate.id] || 0)} cursor-pointer`} onClick={() => setSelectedRoommate(roommate)}>
                   {getBalanceDisplay(balances[roommate.id] || 0)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -180,29 +149,9 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
               {getBalanceDisplay(balances[selectedRoommate.id] || 0)}
             </span>
           </p>
-          <div className="mt-4">
-            <div className="flex items-center mb-4">
-              <input
-                type="text"
-                value={editRoommateName}
-                onChange={(e) => setEditRoommateName(e.target.value)}
-                placeholder="Edit roommate name"
-                className="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors mr-2"
-              />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleEditRoommate}
-                disabled={!editRoommateName.trim() || isEditing}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-300"
-              >
-                {isEditing ? 'Saving...' : 'Save'}
-              </motion.button>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-between">
             <button 
-              onClick={() => setSelectedRoommateWithEdit(null)}
+              onClick={() => setSelectedRoommate(null)}
               className="text-gray-500 hover:text-gray-700 transition-colors"
             >
               Close
