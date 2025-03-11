@@ -158,17 +158,19 @@ const HomePage = () => {
       <section className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <motion.div 
-            className="bg-gray-800 rounded-xl overflow-hidden shadow-2xl"
+            className="bg-white rounded-xl overflow-hidden shadow-2xl"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <div className="relative pb-[56.25%]">
-              {/* Replace with your actual app screenshot */}
-              <div className="absolute inset-0 flex items-center justify-center text-gray-600 bg-gray-200">
-                <span className="text-xl">App Screenshot</span>
-              </div>
+            <div className="relative">
+              {/* Dashboard screenshot */}
+              <img 
+                src="/dashboard-screenshot.png" 
+                alt="Roommate Expense Splitter Dashboard" 
+                className="w-full h-auto"
+              />
             </div>
           </motion.div>
         </div>
