@@ -1,7 +1,7 @@
 // components/RoommatesList.tsx
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getRoommates, addRoommate, deleteRoommate } from '../services/roommateService';
+import { getRoommates, addRoommate, deleteRoommate, updateRoommate } from '../services/roommateService';
 import { getUserBalances } from '../services/expenseService';
 import { motion } from 'framer-motion';
 
@@ -20,6 +20,8 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
   const [selectedRoommate, setSelectedRoommate] = useState<Roommate | null>(null);
   const [newRoommateName, setNewRoommateName] = useState('');
   const [showAddRoommateModal, setShowAddRoommateModal] = useState(false);
+  const [editingName, setEditingName] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchRoommates();
@@ -69,6 +71,26 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
       setSelectedRoommate(null);
     } catch (error) {
       console.error('Error deleting roommate:', error);
+    }
+  };
+
+  const handleEditRoommate = () => {
+    if (selectedRoommate && editingName.trim()) {
+      setIsEditing(true);
+      updateRoommate(selectedRoommate.id, editingName.trim())
+        .then(updatedRoommate => {
+          const updatedRoommates = roommates.map(r => 
+            r.id === updatedRoommate.id ? updatedRoommate : r
+          );
+          setRoommates(updatedRoommates);
+          onRoommatesChange(updatedRoommates);
+          setSelectedRoommate(updatedRoommate);
+          setIsEditing(false);
+        })
+        .catch(error => {
+          console.error('Error updating roommate:', error);
+          setIsEditing(false);
+        });
     }
   };
 
@@ -143,15 +165,36 @@ export default function RoommatesList({ onRoommatesChange }: RoommatesListProps)
           className="mt-6 bg-white shadow-sm rounded-xl p-6 border border-gray-100"
         >
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Roommate Details</h3>
-          <p className="mb-2"><span className="font-medium text-gray-700">Name:</span> {selectedRoommate.name}</p>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
+            <div className="flex items-center">
+              <input
+                type="text"
+                value={editingName || selectedRoommate.name}
+                onChange={(e) => setEditingName(e.target.value)}
+                className="p-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                placeholder="Enter roommate name"
+              />
+            </div>
+          </div>
           <p className="mb-4"><span className="font-medium text-gray-700">Balance:</span>{' '}
             <span className={`font-medium ${getBalanceColor(balances[selectedRoommate.id] || 0)}`}>
               {getBalanceDisplay(balances[selectedRoommate.id] || 0)}
             </span>
           </p>
           <div className="mt-4 flex justify-between">
+            <button
+              onClick={handleEditRoommate}
+              disabled={isEditing || !editingName.trim() || editingName === selectedRoommate.name}
+              className={`text-indigo-600 hover:text-indigo-800 transition-colors font-medium ${(isEditing || !editingName.trim() || editingName === selectedRoommate.name) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isEditing ? 'Updating...' : 'Save Changes'}
+            </button>
             <button 
-              onClick={() => setSelectedRoommate(null)}
+              onClick={() => {
+                setSelectedRoommate(null);
+                setEditingName('');
+              }}
               className="text-gray-500 hover:text-gray-700 transition-colors"
             >
               Close
